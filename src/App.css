@@ -1,0 +1,53 @@
+.app {
+  max-width: 560px;
+  margin: 40px auto;
+  font-family: system-ui, sans-serif;
+  padding: 0 16px;
+}
+
+.formulario {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.formulario input {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 15px;
+}
+
+.formulario button {
+  padding: 10px 18px;
+  border: none;
+  border-radius: 8px;
+  background: #f59e0b;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.lista {
+  list-style: none;
+  padding: 0;
+}
+
+.lista li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  margin-bottom: 8px;
+}
+
+.lista button {
+  background: none;
+  border: none;
+  font-size: 17px;
+  cursor: pointer;
+  margin-left: 6px;
+}
