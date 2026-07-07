@@ -3,7 +3,7 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyAaOdSCIu83D5ub8byKWIaF2qXyNihjJFI",
+
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "xbank-dd5bf.firebaseapp.com",
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "xbank-dd5bf",
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "xbank-dd5bf.firebasestorage.app",
