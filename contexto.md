@@ -48,7 +48,15 @@ movimientos/{id}   → { emisorUid, receptorUid, monto, fecha, descripcion }
 Al entrar, el usuario ve su nombre y su saldo actual. El saldo se lee con onSnapshot: si cambia en Firestore (por ejemplo, porque otro usuario le transfirió).
 
 3. Transferencias
-Formulario para transferir a otro usuario (por email o identificador). Validaciones mínimas: monto mayor a 0, saldo suficiente, no transferirse a sí mismo, destinatario existente. La transferencia descuenta al emisor, abona al receptor y registra el movimiento.
+Formulario para transferir a otro usuario (por email o identificador). Debe ser un botón aparte que diga "Transferir". Que me de una lista tipo dropdown de los usuarios a los que puedo transferirle.
+
+Validaciones mínimas: 
+- Monto mayor a 0 en la cuenta para poder tener la opción de transferir.
+- No puede transferir un monto mayor al saldo disponible 
+- No se pueden realizar transferencias a uno mismo
+- La transferencia descuenta el monto transferido al emisor
+- La transferencia abona el monto transferido al receptor
+- El movimiento se registra con fecha y hora para el emisor y el receptor.
 
 4. Historial de movimientos
 Lista de movimientos del usuario (enviados y recibidos), ordenada del más reciente al más antiguo, también en tiempo real. Cada movimiento muestra fecha, contraparte, monto y tipo (envío/recepción).
