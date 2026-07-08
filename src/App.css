@@ -79,13 +79,15 @@
 }
 
 .saldo-card,
-.transfer-card {
+.transfer-card,
+.history-card {
   border-radius: 16px;
   padding: 18px;
   background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
 }
 
-.transfer-card {
+.transfer-card,
+.history-card {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
 }
@@ -136,6 +138,56 @@
   margin: 0;
   color: #64748b;
   font-weight: 400;
+}
+
+.history-content {
+  margin-top: 12px;
+}
+
+.history-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: white;
+  border: 1px solid #e2e8f0;
+}
+
+.history-title {
+  margin: 0 0 4px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.history-meta {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.95rem;
+}
+
+.history-amount {
+  margin: 0;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.history-amount.positive {
+  color: #15803d;
+}
+
+.history-amount.negative {
+  color: #b91c1c;
 }
 
 .feedback {

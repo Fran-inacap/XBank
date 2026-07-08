@@ -12,7 +12,12 @@ function App() {
   const [cargando, setCargando] = useState(true);
   const [perfilCargando, setPerfilCargando] = useState(true);
   const [usuariosDisponibles, setUsuariosDisponibles] = useState([]);
+  const [usuariosPorId, setUsuariosPorId] = useState({});
   const [mostrarFormularioTransferencia, setMostrarFormularioTransferencia] = useState(false);
+  const [mostrarHistorial, setMostrarHistorial] = useState(false);
+  const [movimientos, setMovimientos] = useState([]);
+  const [movimientosCargando, setMovimientosCargando] = useState(true);
+  const [movimientosError, setMovimientosError] = useState("");
   const [iniciarSesion, setIniciarSesion] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -75,6 +80,7 @@ function App() {
     // Se obtiene la lista de usuarios disponibles para transferir desde Firestore.
     if (!usuario?.uid) {
       setUsuariosDisponibles([]);
+      setUsuariosPorId({});
       setDestinatarioId("");
       return;
     }
@@ -83,17 +89,21 @@ function App() {
     const unsubscribeUsuarios = onSnapshot(
       usuariosRef,
       (snapshot) => {
-        const usuarios = snapshot.docs
-          .map((documento) => ({ id: documento.id, ...documento.data() }))
-          .filter((usuarioDisponible) => usuarioDisponible.id !== usuario.uid);
+        const usuarios = snapshot.docs.map((documento) => ({ id: documento.id, ...documento.data() }));
+        const mapaUsuarios = usuarios.reduce((acumulador, usuarioActual) => {
+          acumulador[usuarioActual.id] = usuarioActual;
+          return acumulador;
+        }, {});
+        const otrosUsuarios = usuarios.filter((usuarioDisponible) => usuarioDisponible.id !== usuario.uid);
 
-        setUsuariosDisponibles(usuarios);
+        setUsuariosPorId(mapaUsuarios);
+        setUsuariosDisponibles(otrosUsuarios);
         setDestinatarioId((valorActual) => {
-          if (valorActual && usuarios.some((usuarioDisponible) => usuarioDisponible.id === valorActual)) {
+          if (valorActual && otrosUsuarios.some((usuarioDisponible) => usuarioDisponible.id === valorActual)) {
             return valorActual;
           }
 
-          return usuarios[0]?.id || "";
+          return otrosUsuarios[0]?.id || "";
         });
       },
       (snapshotError) => {
@@ -102,6 +112,44 @@ function App() {
     );
 
     return () => unsubscribeUsuarios();
+  }, [usuario?.uid]);
+
+  useEffect(() => {
+    // Se escucha la colección de movimientos para mostrar el historial en tiempo real.
+    if (!usuario?.uid) {
+      setMovimientos([]);
+      setMovimientosCargando(false);
+      setMovimientosError("");
+      return;
+    }
+
+    setMovimientosCargando(true);
+    setMovimientosError("");
+
+    const movimientosRef = collection(db, "movimientos");
+    const unsubscribeMovimientos = onSnapshot(
+      movimientosRef,
+      (snapshot) => {
+        const movimientosUsuario = snapshot.docs
+          .map((documento) => ({ id: documento.id, ...documento.data() }))
+          .filter((movimiento) => movimiento.emisorUid === usuario.uid || movimiento.receptorUid === usuario.uid)
+          .sort((a, b) => {
+            const fechaA = a.fecha?.toDate ? a.fecha.toDate() : new Date(a.fecha || 0);
+            const fechaB = b.fecha?.toDate ? b.fecha.toDate() : new Date(b.fecha || 0);
+            return fechaB - fechaA;
+          });
+
+        setMovimientos(movimientosUsuario);
+        setMovimientosCargando(false);
+      },
+      (snapshotError) => {
+        console.error("No se pudo cargar el historial de movimientos:", snapshotError);
+        setMovimientosError("No se pudo cargar el historial de movimientos.");
+        setMovimientosCargando(false);
+      }
+    );
+
+    return () => unsubscribeMovimientos();
   }, [usuario?.uid]);
 
   const handleAuthSubmit = async (event) => {
@@ -177,6 +225,11 @@ function App() {
     setMostrarFormularioTransferencia((valorActual) => !valorActual);
     setTransferenciaError("");
     setTransferenciaExito("");
+  };
+
+  const handleHistorialToggle = () => {
+    setMostrarHistorial((valorActual) => !valorActual);
+    setMovimientosError("");
   };
 
   const handleTransferSubmit = async (event) => {
@@ -275,6 +328,34 @@ function App() {
       currency: "CLP",
       maximumFractionDigits: 0,
     }).format(numero);
+  };
+
+  const formatearFechaHora = (fecha) => {
+    const fechaValor = fecha?.toDate ? fecha.toDate() : new Date(fecha || 0);
+
+    if (Number.isNaN(fechaValor.getTime())) {
+      return "Fecha no disponible";
+    }
+
+    return new Intl.DateTimeFormat("es-CL", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(fechaValor);
+  };
+
+  const obtenerContraparte = (movimiento) => {
+    const uidContraparte = movimiento.emisorUid === usuario?.uid ? movimiento.receptorUid : movimiento.emisorUid;
+    const usuarioContraparte = usuariosPorId[uidContraparte];
+
+    if (usuarioContraparte?.nombre) {
+      return usuarioContraparte.nombre;
+    }
+
+    if (usuarioContraparte?.email) {
+      return usuarioContraparte.email;
+    }
+
+    return "Usuario externo";
   };
 
   if (cargando) {
@@ -406,6 +487,50 @@ function App() {
               {transferenciaError && <p className="feedback feedback-error">{transferenciaError}</p>}
               {transferenciaExito && <p className="feedback">{transferenciaExito}</p>}
             </form>
+          )}
+        </div>
+
+        <div className="history-card">
+          <div className="transfer-header">
+            <h2>Movimientos</h2>
+            <button type="button" className="secondary-btn" onClick={handleHistorialToggle}>
+              {mostrarHistorial ? "Ocultar movimientos" : "Ver movimientos"}
+            </button>
+          </div>
+
+          {mostrarHistorial && (
+            <div className="history-content">
+              {movimientosCargando ? (
+                <p className="transfer-empty">Cargando historial...</p>
+              ) : movimientosError ? (
+                <p className="feedback feedback-error">{movimientosError}</p>
+              ) : movimientos.length === 0 ? (
+                <p className="transfer-empty">No hay movimientos registrados todavía.</p>
+              ) : (
+                <ul className="history-list">
+                  {movimientos.map((movimiento) => {
+                    const esEnvio = movimiento.emisorUid === usuario.uid;
+
+                    return (
+                      <li key={movimiento.id} className="history-item">
+                        <div>
+                          <p className="history-title">
+                            {esEnvio ? "Envío" : "Recepción"} · {obtenerContraparte(movimiento)}
+                          </p>
+                          <p className="history-meta">
+                            {formatearFechaHora(movimiento.fecha)} · {movimiento.descripcion || "Sin descripción"}
+                          </p>
+                        </div>
+                        <p className={`history-amount ${esEnvio ? "negative" : "positive"}`}>
+                          {esEnvio ? "-" : "+"}
+                          {formatearSaldo(movimiento.monto)}
+                        </p>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
           )}
         </div>
       </div>

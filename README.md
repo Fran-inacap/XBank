@@ -35,10 +35,18 @@ npm run dev
 
 Puedes crear cuentas nuevas desde la UI o usar estas credenciales si ya las agregaste a Firestore en la colección users:
 
-1. usuario: fran.gonzalez@xbank.cl
-   contraseña: 123456
-2. usuario: sergio.perez@xbank.cl
-   contraseña: contraseña
+1. usuario: fernando.alonso@xbank.cl
+   contraseña: astonmartin
+2. usuario: kimi.antonelli@xbank.cl
+   contraseña: mercedes
+
+## Funcionalidades implementadas
+
+- Autenticación con Firebase Authentication
+- Dashboard con saldo en tiempo real desde Firestore
+- Transferencias entre usuarios con validaciones y registro de movimientos
+- Historial de movimientos en tiempo real, ordenado por fecha y hora
+- Botones separados para transferir y ver movimientos
 
 ## Estructura principal
 
