@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createUserWithEmailAndPassword, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
-import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, serverTimestamp, setDoc } from "firebase/firestore";
 import { auth, db } from "./firebase";
 import "./App.css";
 
@@ -8,22 +8,60 @@ const SALDO_INICIAL = 100000;
 
 function App() {
   const [usuario, setUsuario] = useState(null);
+  const [perfil, setPerfil] = useState(null);
   const [cargando, setCargando] = useState(true);
+  const [perfilCargando, setPerfilCargando] = useState(true);
   const [iniciarSesion, setIniciarSesion] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [nombre, setNombre] = useState("");
   const [error, setError] = useState("");
+  const [perfilError, setPerfilError] = useState("");
   const [procesando, setProcesando] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (usuarioActual) => {
+    // Se suscribe al estado de autenticación para saber si hay un usuario activo.
+    const unsubscribeAuth = onAuthStateChanged(auth, (usuarioActual) => {
       setUsuario(usuarioActual);
       setCargando(false);
     });
 
-    return () => unsubscribe();
+    return () => unsubscribeAuth();
   }, []);
+
+  useEffect(() => {
+    // Se escucha el documento del usuario en Firestore para mostrar saldo y nombre en tiempo real.
+    if (!usuario?.uid) {
+      setPerfil(null);
+      setPerfilCargando(false);
+      setPerfilError("");
+      return;
+    }
+
+    setPerfilCargando(true);
+    setPerfilError("");
+
+    const perfilRef = doc(db, "users", usuario.uid);
+    const unsubscribePerfil = onSnapshot(
+      perfilRef,
+      (snapshot) => {
+        if (snapshot.exists()) {
+          setPerfil({ id: snapshot.id, ...snapshot.data() });
+        } else {
+          setPerfil(null);
+          setPerfilError("No se encontró el perfil del usuario.");
+        }
+        setPerfilCargando(false);
+      },
+      (snapshotError) => {
+        console.error("No se pudo cargar el perfil del usuario:", snapshotError);
+        setPerfilError("No se pudo cargar la información del saldo.");
+        setPerfilCargando(false);
+      }
+    );
+
+    return () => unsubscribePerfil();
+  }, [usuario?.uid]);
 
   const handleAuthSubmit = async (event) => {
     event.preventDefault();
@@ -86,6 +124,15 @@ function App() {
     setIniciarSesion((valor) => !valor);
   };
 
+  const formatearSaldo = (valor) => {
+    const numero = Number(valor ?? 0);
+    return new Intl.NumberFormat("es-CL", {
+      style: "currency",
+      currency: "CLP",
+      maximumFractionDigits: 0,
+    }).format(numero);
+  };
+
   if (cargando) {
     return <div className="app loading">Cargando...</div>;
   }
@@ -132,11 +179,31 @@ function App() {
 
   return (
     <div className="app">
-      <div className="auth-card">
-        <h1>XBank</h1>
-        <p>Has iniciado sesión correctamente.</p>
-        <p>{usuario.email}</p>
-        <button onClick={handleLogout}>Cerrar sesión</button>
+      <div className="dashboard-card">
+        <div className="dashboard-header">
+          <div>
+            <p className="eyebrow">Bienvenido a XBank</p>
+            <h1>{perfil?.nombre || usuario.email}</h1>
+          </div>
+          <button type="button" className="secondary-btn" onClick={handleLogout}>
+            Cerrar sesión
+          </button>
+        </div>
+
+        <div className="saldo-card">
+          <p className="saldo-label">Saldo actual</p>
+
+          {perfilCargando ? (
+            <p className="saldo-value">Cargando saldo...</p>
+          ) : perfilError ? (
+            <p className="feedback feedback-error">{perfilError}</p>
+          ) : (
+            <>
+              <p className="saldo-value">{formatearSaldo(perfil?.saldo)}</p>
+              <p className="saldo-subtitle">Se actualiza automáticamente desde Firestore.</p>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

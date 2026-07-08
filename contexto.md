@@ -69,4 +69,7 @@ Botón de logout que limpia el estado y devuelve al login. Ojo: al cerrar sesió
 - No dejar nada como la ApiKey disponible.
 - Antes de aplicar cambios, debes validar conmigo lo que se debe hacer. Los cambios solo deben hacerse previa autorización explícita (pregunta "¿quieres aplicar estos cambios?" Solo un sí como respuesta permite continuar).
 - Aplicar los requisitos funcionales de uno en uno. Una vez que uno esté listo y aprobado por mí (preguntar "estás conforme con el cambio realizado?") se puede continuar con el siguiente.
+- Los cambios deben aplicarse solo a App.jsx, App.css y firebase.js. Si estimas que se debe realizar un cambio en otro archivo, debes preguntarme para confirmar
+- Modificar el README.md a medida que se vayan implementando cambios. Si falta información de cambios pasados, agregar. Debe estar en español.
+
 

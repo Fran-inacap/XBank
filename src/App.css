@@ -1,69 +1,24 @@
 .app {
-  max-width: 560px;
+  max-width: 720px;
   margin: 40px auto;
   font-family: system-ui, sans-serif;
   padding: 0 16px;
 }
 
-.formulario {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 24px;
-}
-
-.formulario input {
-  flex: 1;
-  padding: 10px 14px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  font-size: 15px;
-}
-
-.formulario button {
-  padding: 10px 18px;
-  border: none;
-  border-radius: 8px;
-  background: #f59e0b;
-  color: white;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.lista {
-  list-style: none;
-  padding: 0;
-}
-
-.lista li {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  margin-bottom: 8px;
-}
-
-.lista button {
-  background: none;
-  border: none;
-  font-size: 17px;
-  cursor: pointer;
-  margin-left: 6px;
-}
-
-.auth-card {
+.auth-card,
+.dashboard-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 16px;
+  border-radius: 20px;
   padding: 24px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.auth-card h1 {
+.auth-card h1,
+.dashboard-card h1 {
   margin: 0;
 }
 
@@ -81,7 +36,8 @@
   font-size: 15px;
 }
 
-.auth-card button {
+.auth-card button,
+.secondary-btn {
   padding: 10px 14px;
   border: none;
   border-radius: 999px;
@@ -91,9 +47,48 @@
   cursor: pointer;
 }
 
-.auth-card .secondary-btn {
+.secondary-btn {
   background: #e2e8f0;
   color: #0f172a;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.eyebrow {
+  margin: 0 0 4px;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #64748b;
+}
+
+.saldo-card {
+  border-radius: 16px;
+  padding: 18px;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+}
+
+.saldo-label {
+  margin: 0 0 8px;
+  font-weight: 700;
+  color: #1d4ed8;
+}
+
+.saldo-value {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.saldo-subtitle {
+  margin: 8px 0 0;
+  color: #475569;
 }
 
 .feedback {
