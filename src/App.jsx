@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createUserWithEmailAndPassword, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
-import { doc, getDoc, onSnapshot, serverTimestamp, setDoc } from "firebase/firestore";
+import { collection, doc, getDoc, onSnapshot, runTransaction, serverTimestamp, setDoc } from "firebase/firestore";
 import { auth, db } from "./firebase";
 import "./App.css";
 
@@ -11,13 +11,21 @@ function App() {
   const [perfil, setPerfil] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [perfilCargando, setPerfilCargando] = useState(true);
+  const [usuariosDisponibles, setUsuariosDisponibles] = useState([]);
+  const [mostrarFormularioTransferencia, setMostrarFormularioTransferencia] = useState(false);
   const [iniciarSesion, setIniciarSesion] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [nombre, setNombre] = useState("");
+  const [destinatarioId, setDestinatarioId] = useState("");
+  const [montoTransferencia, setMontoTransferencia] = useState("");
+  const [descripcionTransferencia, setDescripcionTransferencia] = useState("");
   const [error, setError] = useState("");
   const [perfilError, setPerfilError] = useState("");
+  const [transferenciaError, setTransferenciaError] = useState("");
+  const [transferenciaExito, setTransferenciaExito] = useState("");
   const [procesando, setProcesando] = useState(false);
+  const [transferenciaProcesando, setTransferenciaProcesando] = useState(false);
 
   useEffect(() => {
     // Se suscribe al estado de autenticación para saber si hay un usuario activo.
@@ -61,6 +69,39 @@ function App() {
     );
 
     return () => unsubscribePerfil();
+  }, [usuario?.uid]);
+
+  useEffect(() => {
+    // Se obtiene la lista de usuarios disponibles para transferir desde Firestore.
+    if (!usuario?.uid) {
+      setUsuariosDisponibles([]);
+      setDestinatarioId("");
+      return;
+    }
+
+    const usuariosRef = collection(db, "users");
+    const unsubscribeUsuarios = onSnapshot(
+      usuariosRef,
+      (snapshot) => {
+        const usuarios = snapshot.docs
+          .map((documento) => ({ id: documento.id, ...documento.data() }))
+          .filter((usuarioDisponible) => usuarioDisponible.id !== usuario.uid);
+
+        setUsuariosDisponibles(usuarios);
+        setDestinatarioId((valorActual) => {
+          if (valorActual && usuarios.some((usuarioDisponible) => usuarioDisponible.id === valorActual)) {
+            return valorActual;
+          }
+
+          return usuarios[0]?.id || "";
+        });
+      },
+      (snapshotError) => {
+        console.error("No se pudo cargar la lista de usuarios:", snapshotError);
+      }
+    );
+
+    return () => unsubscribeUsuarios();
   }, [usuario?.uid]);
 
   const handleAuthSubmit = async (event) => {
@@ -122,6 +163,109 @@ function App() {
     setNombre("");
     setError("");
     setIniciarSesion((valor) => !valor);
+  };
+
+  const handleAmountChange = (event) => {
+    setMontoTransferencia(event.target.value);
+
+    if (transferenciaError) {
+      setTransferenciaError("");
+    }
+  };
+
+  const handleTransferToggle = () => {
+    setMostrarFormularioTransferencia((valorActual) => !valorActual);
+    setTransferenciaError("");
+    setTransferenciaExito("");
+  };
+
+  const handleTransferSubmit = async (event) => {
+    event.preventDefault();
+    setTransferenciaError("");
+    setTransferenciaExito("");
+
+    if (!destinatarioId) {
+      setTransferenciaError("Selecciona a un destinatario para transferir.");
+      return;
+    }
+
+    const monto = Number(montoTransferencia);
+
+    if (!Number.isFinite(monto) || monto <= 0) {
+      setTransferenciaError("Ingresa un monto válido mayor a cero.");
+      return;
+    }
+
+    if (!perfil?.saldo && perfil?.saldo !== 0) {
+      setTransferenciaError("Aún no se cargó tu saldo. Intenta de nuevo en unos segundos.");
+      return;
+    }
+
+    if (monto > Number(perfil.saldo)) {
+      setTransferenciaError("No tienes saldo suficiente para realizar esta transferencia.");
+      return;
+    }
+
+    if (destinatarioId === usuario.uid) {
+      setTransferenciaError("No puedes transferirte dinero a ti mismo.");
+      return;
+    }
+
+    setTransferenciaProcesando(true);
+
+    try {
+      const emisorRef = doc(db, "users", usuario.uid);
+      const receptorRef = doc(db, "users", destinatarioId);
+      const movimientoRef = doc(collection(db, "movimientos"));
+
+      await runTransaction(db, async (transaccion) => {
+        const emisorSnapshot = await transaccion.get(emisorRef);
+        const receptorSnapshot = await transaccion.get(receptorRef);
+
+        if (!emisorSnapshot.exists()) {
+          throw new Error("Tu perfil ya no está disponible.");
+        }
+
+        if (!receptorSnapshot.exists()) {
+          throw new Error("El destinatario ya no está disponible.");
+        }
+
+        const saldoEmisorActual = Number(emisorSnapshot.data().saldo ?? 0);
+        const saldoReceptorActual = Number(receptorSnapshot.data().saldo ?? 0);
+
+        if (saldoEmisorActual < monto) {
+          throw new Error("No tienes saldo suficiente para realizar esta transferencia.");
+        }
+
+        transaccion.update(emisorRef, { saldo: saldoEmisorActual - monto });
+        transaccion.update(receptorRef, { saldo: saldoReceptorActual + monto });
+        transaccion.set(movimientoRef, {
+          emisorUid: usuario.uid,
+          receptorUid: destinatarioId,
+          monto,
+          descripcion: descripcionTransferencia.trim() || "Transferencia",
+          fecha: serverTimestamp(),
+        });
+      });
+
+      setPerfil((perfilActual) => {
+        if (!perfilActual) {
+          return perfilActual;
+        }
+
+        return {
+          ...perfilActual,
+          saldo: Number(perfilActual.saldo ?? 0) - monto,
+        };
+      });
+      setMontoTransferencia("");
+      setDescripcionTransferencia("");
+      setTransferenciaExito("Transferencia realizada con éxito.");
+    } catch (transferError) {
+      setTransferenciaError(transferError.message || "No se pudo completar la transferencia.");
+    } finally {
+      setTransferenciaProcesando(false);
+    }
   };
 
   const formatearSaldo = (valor) => {
@@ -202,6 +346,66 @@ function App() {
               <p className="saldo-value">{formatearSaldo(perfil?.saldo)}</p>
               <p className="saldo-subtitle">Se actualiza automáticamente desde Firestore.</p>
             </>
+          )}
+        </div>
+
+        <div className="transfer-card">
+          <div className="transfer-header">
+            <h2>Transferir dinero</h2>
+            <button type="button" className="secondary-btn" onClick={handleTransferToggle}>
+              {mostrarFormularioTransferencia ? "Ocultar" : "Transferir"}
+            </button>
+          </div>
+
+          {mostrarFormularioTransferencia && (
+            <form className="transfer-form" onSubmit={handleTransferSubmit}>
+              <label className="transfer-field">
+                Destinatario
+                {usuariosDisponibles.length > 0 ? (
+                  <select value={destinatarioId} onChange={(event) => setDestinatarioId(event.target.value)}>
+                    <option value="">Selecciona un usuario</option>
+                    {usuariosDisponibles.map((usuarioDisponible) => (
+                      <option key={usuarioDisponible.id} value={usuarioDisponible.id}>
+                        {usuarioDisponible.nombre} ({usuarioDisponible.email})
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className="transfer-empty">No hay otros usuarios disponibles para transferir.</p>
+                )}
+              </label>
+
+              <label className="transfer-field">
+                Monto
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={montoTransferencia}
+                  onChange={handleAmountChange}
+                  placeholder="10000"
+                />
+              </label>
+
+              <label className="transfer-field">
+                Descripción
+                <input
+                  type="text"
+                  value={descripcionTransferencia}
+                  onChange={(event) => setDescripcionTransferencia(event.target.value)}
+                  placeholder="Pago por servicios"
+                />
+              </label>
+
+              <div className="transfer-actions">
+                <button type="submit" disabled={transferenciaProcesando || !destinatarioId || !montoTransferencia}>
+                  {transferenciaProcesando ? "Procesando..." : "Confirmar transferencia"}
+                </button>
+              </div>
+
+              {transferenciaError && <p className="feedback feedback-error">{transferenciaError}</p>}
+              {transferenciaExito && <p className="feedback">{transferenciaExito}</p>}
+            </form>
           )}
         </div>
       </div>
