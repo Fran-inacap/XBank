@@ -96,11 +96,13 @@ Botón de logout que limpia el estado y devuelve al login. Ojo: al cerrar sesió
 3. Eliminar mensaje de "Se actualiza automáticamente desde Firestore" al hacer login
 4. Mostrar la fecha en movimientos con el formato "01 de enero de 2026".
 5. Mostrar la hora en movimientos con el formato 24 horas
-6. Botón de retiro de dinero con la misma visual que los otros botones
+6. Botón de depósito de dinero con la misma visual que los otros botones
 7. Depositar y retirar deben ser opciones independientes
 - Implementar con sistema de botones con visual similar a transferencia de dinero. ejemplo: que diga "Depositar dinero" y que al hacer clic en botón "Depositar" se abra el menú para realizar la transacción.
 
 8. Reflejar retiros y depósitos en historial de movimientos 
 9. Modo oscuro debe tener letras de color contrastante para poder leer el texto (color blanco o similar)
 10. Al crear un usuario, se debe mostrar el saldo inicial de $100.000. Actualmente muestra "No se encontró el perfil del usuario". Si es necesario usar un await hasta que esté la información en firebase para mostrar la información correspondiente.
+
+11. Eliminar texto "Gestiona tu saldo con operaciones simuladas y confirmación."
 

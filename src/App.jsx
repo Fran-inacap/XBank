@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { collection, doc, onSnapshot, runTransaction } from "firebase/firestore";
+import { collection, doc, onSnapshot, runTransaction, serverTimestamp } from "firebase/firestore";
 import { db } from "./firebase";
 import { useAuth } from "./context/AuthContext";
 import "./App.css";
@@ -233,6 +233,7 @@ function App() {
 
     try {
       const usuarioRef = doc(db, "users", usuario.uid);
+      const movimientoRef = doc(collection(db, "movimientos"));
 
       await runTransaction(db, async (transaccion) => {
         const usuarioSnapshot = await transaccion.get(usuarioRef);
@@ -243,6 +244,14 @@ function App() {
 
         const saldoActual = Number(usuarioSnapshot.data().saldo ?? 0);
         transaccion.update(usuarioRef, { saldo: saldoActual + monto });
+        transaccion.set(movimientoRef, {
+          emisorUid: "sistema",
+          receptorUid: usuario.uid,
+          tipo: "deposito",
+          monto,
+          descripcion: "Depósito en cuenta propia",
+          fecha: serverTimestamp(),
+        });
       });
 
       updateProfile((perfilActual) => {
@@ -294,6 +303,7 @@ function App() {
 
     try {
       const usuarioRef = doc(db, "users", usuario.uid);
+      const movimientoRef = doc(collection(db, "movimientos"));
 
       await runTransaction(db, async (transaccion) => {
         const usuarioSnapshot = await transaccion.get(usuarioRef);
@@ -309,6 +319,14 @@ function App() {
         }
 
         transaccion.update(usuarioRef, { saldo: saldoActual - monto });
+        transaccion.set(movimientoRef, {
+          emisorUid: usuario.uid,
+          receptorUid: "sistema",
+          tipo: "retiro",
+          monto,
+          descripcion: "Retiro de cuenta propia",
+          fecha: serverTimestamp(),
+        });
       });
 
       updateProfile((perfilActual) => {
@@ -477,6 +495,10 @@ function App() {
   };
 
   const obtenerContraparte = (movimiento) => {
+    if (movimiento.tipo === "deposito" || movimiento.tipo === "retiro") {
+      return "Cuenta propia";
+    }
+
     const uidContraparte = movimiento.emisorUid === usuario?.uid ? movimiento.receptorUid : movimiento.emisorUid;
     const usuarioContraparte = usuariosPorId[uidContraparte];
 
@@ -491,8 +513,33 @@ function App() {
     return "Usuario externo";
   };
 
+  const esMovimientoNegativo = (movimiento) => {
+    // Se centraliza el signo para que transferencias, retiros y depósitos usen la misma regla en historial y filtros.
+    if (movimiento.tipo === "deposito") {
+      return false;
+    }
+
+    if (movimiento.tipo === "retiro") {
+      return true;
+    }
+
+    return movimiento.emisorUid === usuario?.uid;
+  };
+
+  const obtenerEtiquetaMovimiento = (movimiento) => {
+    if (movimiento.tipo === "deposito") {
+      return "Depósito";
+    }
+
+    if (movimiento.tipo === "retiro") {
+      return "Retiro";
+    }
+
+    return esMovimientoNegativo(movimiento) ? "Envío" : "Recepción";
+  };
+
   const movimientosFiltrados = movimientos.filter((movimiento) => {
-    const esEnvio = movimiento.emisorUid === usuario?.uid;
+    const esEnvio = esMovimientoNegativo(movimiento);
     const fechaMovimiento = movimiento.fecha?.toDate ? movimiento.fecha.toDate() : new Date(movimiento.fecha || 0);
     const mesMovimiento = fechaMovimiento.getMonth() + 1;
     const nombreContraparte = obtenerContraparte(movimiento);
@@ -691,7 +738,7 @@ function App() {
                   </label>
 
                   <div className="operation-actions">
-                    <button type="button" onClick={handleDepositoSubmit} disabled={depositoProcesando || !montoDeposito}>
+                    <button type="button" className="secondary-btn" onClick={handleDepositoSubmit} disabled={depositoProcesando || !montoDeposito}>
                       {depositoProcesando ? "Procesando..." : "Confirmar depósito"}
                     </button>
                   </div>
@@ -796,13 +843,14 @@ function App() {
                   ) : (
                     <ul className="history-list">
                       {movimientosFiltrados.map((movimiento) => {
-                        const esEnvio = movimiento.emisorUid === usuario.uid;
+                        const esEnvio = esMovimientoNegativo(movimiento);
+                        const etiquetaMovimiento = obtenerEtiquetaMovimiento(movimiento);
 
                         return (
                           <li key={movimiento.id} className="history-item">
                             <div>
                               <p className="history-title">
-                                {esEnvio ? "Envío" : "Recepción"} · {obtenerContraparte(movimiento)}
+                                {etiquetaMovimiento} · {obtenerContraparte(movimiento)}
                               </p>
                               <p className="history-meta">
                                 {formatearFechaHora(movimiento.fecha)} · {movimiento.descripcion || "Sin descripción"}
