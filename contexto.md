@@ -108,3 +108,5 @@ Botón de logout que limpia el estado y devuelve al login. Ojo: al cerrar sesió
 
 11. Eliminar texto "Gestiona tu saldo con operaciones simuladas y confirmación."
 
+12. Añadir "Depósito" y "Retiro" a los tipos de movimientos disponibles en el filtro Tipo de Movimeintos.
+

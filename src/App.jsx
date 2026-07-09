@@ -538,13 +538,25 @@ function App() {
     return esMovimientoNegativo(movimiento) ? "Envío" : "Recepción";
   };
 
+  const obtenerTipoFiltroMovimiento = (movimiento) => {
+    if (movimiento.tipo === "deposito") {
+      return "deposito";
+    }
+
+    if (movimiento.tipo === "retiro") {
+      return "retiro";
+    }
+
+    return esMovimientoNegativo(movimiento) ? "envio" : "recepcion";
+  };
+
   const movimientosFiltrados = movimientos.filter((movimiento) => {
-    const esEnvio = esMovimientoNegativo(movimiento);
+    const tipoMovimiento = obtenerTipoFiltroMovimiento(movimiento);
     const fechaMovimiento = movimiento.fecha?.toDate ? movimiento.fecha.toDate() : new Date(movimiento.fecha || 0);
     const mesMovimiento = fechaMovimiento.getMonth() + 1;
     const nombreContraparte = obtenerContraparte(movimiento);
 
-    if (filtroTipo !== "todos" && (filtroTipo === "envio" ? !esEnvio : esEnvio)) {
+    if (filtroTipo !== "todos" && tipoMovimiento !== filtroTipo) {
       return false;
     }
 
@@ -808,6 +820,8 @@ function App() {
                         <option value="todos">Todos</option>
                         <option value="envio">Envío</option>
                         <option value="recepcion">Recepción</option>
+                        <option value="deposito">Depósito</option>
+                        <option value="retiro">Retiro</option>
                       </select>
                     </label>
 
