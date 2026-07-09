@@ -235,6 +235,10 @@ body.dark {
   color: #0f172a;
 }
 
+.card-dark .transfer-header h2 {
+  color: #f8fafc;
+}
+
 .transfer-form {
   display: flex;
   flex-direction: column;
@@ -282,6 +286,12 @@ body.dark {
 }
 
 .card-dark .operation-section h3 {
+  color: #f8fafc;
+}
+
+.card-dark .saldo-value,
+.card-dark .filter-field,
+.card-dark .filter-field select {
   color: #f8fafc;
 }
 

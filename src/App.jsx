@@ -712,8 +712,6 @@ function App() {
             <h2>Depósito y retiro</h2>
           </div>
 
-          <p className="transfer-empty">Gestiona tu saldo con operaciones simuladas y confirmación.</p>
-
           <div className="operation-grid">
             <div className="operation-section">
               <div className="transfer-header">

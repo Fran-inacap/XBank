@@ -102,6 +102,8 @@ Botón de logout que limpia el estado y devuelve al login. Ojo: al cerrar sesió
 
 8. Reflejar retiros y depósitos en historial de movimientos 
 9. Modo oscuro debe tener letras de color contrastante para poder leer el texto (color blanco o similar)
+- Los textos de "Transferir dinero", "Depósito y retiro" y "Movimientos" deben ser contrastantes también.
+
 10. Al crear un usuario, se debe mostrar el saldo inicial de $100.000. Actualmente muestra "No se encontró el perfil del usuario". Si es necesario usar un await hasta que esté la información en firebase para mostrar la información correspondiente.
 
 11. Eliminar texto "Gestiona tu saldo con operaciones simuladas y confirmación."
