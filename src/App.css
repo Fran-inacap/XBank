@@ -75,6 +75,28 @@ body.dark {
   border-color: #475569;
 }
 
+.card-dark h1,
+.card-dark h2,
+.card-dark p,
+.card-dark label,
+.card-dark .history-title,
+.card-dark .history-meta,
+.card-dark .transfer-empty,
+.card-dark .filter-field,
+.card-dark .saldo-subtitle,
+.card-dark .saldo-label,
+.card-dark .eyebrow {
+  color: #f8fafc;
+}
+
+.card-dark .history-amount.negative {
+  color: #fda4af;
+}
+
+.card-dark .history-amount.positive {
+  color: #86efac;
+}
+
 .auth-card h1,
 .dashboard-card h1 {
   margin: 0;

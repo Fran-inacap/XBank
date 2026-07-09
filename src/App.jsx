@@ -146,6 +146,7 @@ function App() {
         credencial = await login(email.trim(), password);
       } else {
         credencial = await register(email.trim(), password, nombre);
+        setIniciarSesion(true);
       }
 
       setEmail("");
