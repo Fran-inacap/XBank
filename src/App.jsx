@@ -1,16 +1,13 @@
 import { useEffect, useState } from "react";
-import { createUserWithEmailAndPassword, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
-import { collection, doc, getDoc, onSnapshot, runTransaction, serverTimestamp, setDoc } from "firebase/firestore";
-import { auth, db } from "./firebase";
+import { collection, doc, onSnapshot, runTransaction } from "firebase/firestore";
+import { db } from "./firebase";
+import { useAuth } from "./context/AuthContext";
 import "./App.css";
 
 const SALDO_INICIAL = 100000;
 
 function App() {
-  const [usuario, setUsuario] = useState(null);
-  const [perfil, setPerfil] = useState(null);
-  const [cargando, setCargando] = useState(true);
-  const [perfilCargando, setPerfilCargando] = useState(true);
+  const { user: usuario, profile: perfil, loading: cargando, profileLoading: perfilCargando, profileError: perfilErrorContext, error: sessionError, login, register, logout: logoutAuth, clearError, updateProfile } = useAuth();
   const [usuariosDisponibles, setUsuariosDisponibles] = useState([]);
   const [usuariosPorId, setUsuariosPorId] = useState({});
   const [mostrarFormularioTransferencia, setMostrarFormularioTransferencia] = useState(false);
@@ -30,7 +27,6 @@ function App() {
   const [filtroMes, setFiltroMes] = useState("todos");
   const [filtroContraparte, setFiltroContraparte] = useState("todos");
   const [error, setError] = useState("");
-  const [perfilError, setPerfilError] = useState("");
   const [transferenciaError, setTransferenciaError] = useState("");
   const [transferenciaExito, setTransferenciaExito] = useState("");
   const [operacionError, setOperacionError] = useState("");
@@ -50,50 +46,6 @@ function App() {
     document.body.classList.toggle("dark", modoOscuro);
     localStorage.setItem("xbank-theme", modoOscuro ? "dark" : "light");
   }, [modoOscuro]);
-
-  useEffect(() => {
-    // Se suscribe al estado de autenticación para saber si hay un usuario activo.
-    const unsubscribeAuth = onAuthStateChanged(auth, (usuarioActual) => {
-      setUsuario(usuarioActual);
-      setCargando(false);
-    });
-
-    return () => unsubscribeAuth();
-  }, []);
-
-  useEffect(() => {
-    // Se escucha el documento del usuario en Firestore para mostrar saldo y nombre en tiempo real.
-    if (!usuario?.uid) {
-      setPerfil(null);
-      setPerfilCargando(false);
-      setPerfilError("");
-      return;
-    }
-
-    setPerfilCargando(true);
-    setPerfilError("");
-
-    const perfilRef = doc(db, "users", usuario.uid);
-    const unsubscribePerfil = onSnapshot(
-      perfilRef,
-      (snapshot) => {
-        if (snapshot.exists()) {
-          setPerfil({ id: snapshot.id, ...snapshot.data() });
-        } else {
-          setPerfil(null);
-          setPerfilError("No se encontró el perfil del usuario.");
-        }
-        setPerfilCargando(false);
-      },
-      (snapshotError) => {
-        console.error("No se pudo cargar el perfil del usuario:", snapshotError);
-        setPerfilError("No se pudo cargar la información del saldo.");
-        setPerfilCargando(false);
-      }
-    );
-
-    return () => unsubscribePerfil();
-  }, [usuario?.uid]);
 
   useEffect(() => {
     // Se obtiene la lista de usuarios disponibles para transferir desde Firestore.
@@ -191,21 +143,9 @@ function App() {
       let credencial;
 
       if (iniciarSesion) {
-        credencial = await signInWithEmailAndPassword(auth, email.trim(), password);
+        credencial = await login(email.trim(), password);
       } else {
-        credencial = await createUserWithEmailAndPassword(auth, email.trim(), password);
-
-        const perfilRef = doc(db, "users", credencial.user.uid);
-        const perfilSnapshot = await getDoc(perfilRef);
-
-        if (!perfilSnapshot.exists()) {
-          await setDoc(perfilRef, {
-            nombre: nombre.trim(),
-            email: email.trim().toLowerCase(),
-            saldo: SALDO_INICIAL,
-            creadoEn: serverTimestamp(),
-          });
-        }
+        credencial = await register(email.trim(), password, nombre);
       }
 
       setEmail("");
@@ -214,14 +154,18 @@ function App() {
       setError("");
       console.info("Autenticación completada", credencial.user.email);
     } catch (authError) {
-      setError(authError.message || "No se pudo completar la operación.");
+      const mensaje = authError?.code === "auth/invalid-credential" || authError?.code === "auth/user-not-found" || authError?.code === "auth/wrong-password"
+        ? "Usuario y/o contraseña incorrectos"
+        : authError.message || "No se pudo completar la operación.";
+
+      setError(mensaje);
     } finally {
       setProcesando(false);
     }
   };
 
   const handleLogout = async () => {
-    await signOut(auth);
+    await logoutAuth();
   };
 
   const resetForms = () => {
@@ -229,6 +173,7 @@ function App() {
     setPassword("");
     setNombre("");
     setError("");
+    clearError();
     setIniciarSesion((valor) => !valor);
   };
 
@@ -299,7 +244,7 @@ function App() {
         transaccion.update(usuarioRef, { saldo: saldoNuevo });
       });
 
-      setPerfil((perfilActual) => {
+      updateProfile((perfilActual) => {
         if (!perfilActual) {
           return perfilActual;
         }
@@ -401,7 +346,7 @@ function App() {
         });
       });
 
-      setPerfil((perfilActual) => {
+      updateProfile((perfilActual) => {
         if (!perfilActual) {
           return perfilActual;
         }
@@ -529,7 +474,7 @@ function App() {
             {iniciarSesion ? "Crear una cuenta" : "Ya tengo cuenta"}
           </button>
 
-          {error && <p className="feedback feedback-error">{error}</p>}
+          {(error || sessionError) && <p className="feedback feedback-error">{error || sessionError}</p>}
         </form>
       </div>
     );
@@ -558,8 +503,8 @@ function App() {
 
           {perfilCargando ? (
             <p className="saldo-value">Cargando saldo...</p>
-          ) : perfilError ? (
-            <p className="feedback feedback-error">{perfilError}</p>
+          ) : perfilErrorContext ? (
+            <p className="feedback feedback-error">{perfilErrorContext}</p>
           ) : (
             <>
               <p className="saldo-value">{formatearSaldo(perfil?.saldo)}</p>

@@ -89,4 +89,15 @@ Botón de logout que limpia el estado y devuelve al login. Ojo: al cerrar sesió
 - Los cambios deben aplicarse solo a App.jsx, App.css y firebase.js. Si estimas que se debe realizar un cambio en otro archivo, debes preguntarme para confirmar
 - Modificar el README.md a medida que se vayan implementando cambios. Si falta información de cambios pasados, agregar. Debe estar en español.
 
+*MEJORAS*
+
+1. Cuando el usuario o la contraseña son incorrectos, mostrar mensaje de "Usuario y/o contraseña incorrectos"
+2. Después de crear una cuenta, vuelve a la página de inicio de sesión o login
+3. Eliminar mensaje de "Se actualiza automáticamente desde Firestore" al hacer login
+4. Mostrar la fecha en movimientos con el formato "01 de enero de 2026".
+5. Mostrar la hora en movimientos con el formato 24 horas
+6. Botón de retiro de dinero con la misma visual que los otros botones
+7. Depositar y retirar deben ser opciones independientes
+8. Reflejar retiros y depósitos en historial de movimientos 
+9. Modo oscuro debe tener letras de color contrastante para poder leer el texto (color blanco o similar)
 
