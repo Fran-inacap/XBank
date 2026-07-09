@@ -1,6 +1,6 @@
 # XBank
 
-Aplicación bancaria en React + Vite + Firebase para practicar autenticación, saldo en tiempo real, transferencias, historial y diseño moderno.
+Aplicación bancaria en React + Vite + Firebase para practicar autenticación, saldo en tiempo real, transferencias, historial reactivo y personalización visual.
 
 ## Requisitos
 
@@ -31,6 +31,12 @@ npm install
 npm run dev
 ```
 
+Para validar una compilación de producción:
+
+```bash
+npm run build
+```
+
 ## Usuarios de prueba
 
 Puedes crear cuentas nuevas desde la UI o usar estas credenciales si ya las agregaste a Firestore en la colección users:
@@ -45,14 +51,20 @@ Puedes crear cuentas nuevas desde la UI o usar estas credenciales si ya las agre
 - Autenticación con Firebase Authentication
 - Dashboard con saldo en tiempo real desde Firestore
 - Transferencias entre usuarios con validaciones y registro de movimientos
+- Depósito y retiro como operaciones independientes, con confirmación del usuario
 - Historial de movimientos en tiempo real, ordenado por fecha y hora
-- Botones separados para transferir y ver movimientos
+- Fecha del historial con formato `01 de enero de 2026` y hora en formato de 24 horas
+- Registro en historial para transferencias, depósitos y retiros
+- Filtros acumulables por tipo, mes y contraparte
+- Filtro por tipo con opciones de envío, recepción, depósito y retiro
+- Modo oscuro persistente con textos contrastantes en las tarjetas principales
 
 ## Estructura principal
 
-- src/components/AuthPanel.jsx: login y registro
-- src/components/Dashboard.jsx: saldo, transferencias, depósito/retiro e historial
-- src/context/AuthContext.jsx: estado global con useReducer + useContext
-- src/services/bankService.js: acceso a Firestore y Firebase Auth
+- src/main.jsx: punto de entrada de la aplicación
+- src/App.jsx: interfaz principal con autenticación, saldo, transferencias, depósito/retiro e historial
+- src/App.css: estilos de la interfaz, incluyendo modo oscuro
+- src/context/AuthContext.jsx: manejo de sesión y perfil del usuario con Context
+- src/firebase.js: inicialización de Firebase Authentication y Firestore
 
 

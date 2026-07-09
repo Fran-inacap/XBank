@@ -8,6 +8,7 @@ const SALDO_INICIAL = 100000;
 
 function App() {
   const { user: usuario, profile: perfil, loading: cargando, profileLoading: perfilCargando, profileError: perfilErrorContext, error: sessionError, login, register, logout: logoutAuth, clearError, updateProfile } = useAuth();
+  // Estado derivado de Firestore para usuarios y movimientos visibles en el dashboard.
   const [usuariosDisponibles, setUsuariosDisponibles] = useState([]);
   const [usuariosPorId, setUsuariosPorId] = useState({});
   const [mostrarFormularioTransferencia, setMostrarFormularioTransferencia] = useState(false);
@@ -17,6 +18,8 @@ function App() {
   const [movimientos, setMovimientos] = useState([]);
   const [movimientosCargando, setMovimientosCargando] = useState(true);
   const [movimientosError, setMovimientosError] = useState("");
+
+  // Estado de formularios controlados para autenticación y operaciones bancarias.
   const [iniciarSesion, setIniciarSesion] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -26,9 +29,13 @@ function App() {
   const [descripcionTransferencia, setDescripcionTransferencia] = useState("");
   const [montoDeposito, setMontoDeposito] = useState("");
   const [montoRetiro, setMontoRetiro] = useState("");
+
+  // Estado de filtros para que el historial se derive de la misma colección sin consultas extra.
   const [filtroTipo, setFiltroTipo] = useState("todos");
   const [filtroMes, setFiltroMes] = useState("todos");
   const [filtroContraparte, setFiltroContraparte] = useState("todos");
+
+  // Estado de feedback para mostrar validaciones y resultados en la UI.
   const [error, setError] = useState("");
   const [transferenciaError, setTransferenciaError] = useState("");
   const [transferenciaExito, setTransferenciaExito] = useState("");
@@ -40,6 +47,8 @@ function App() {
   const [transferenciaProcesando, setTransferenciaProcesando] = useState(false);
   const [depositoProcesando, setDepositoProcesando] = useState(false);
   const [retiroProcesando, setRetiroProcesando] = useState(false);
+
+  // El tema se inicializa desde localStorage para respetar la última preferencia del usuario.
   const [modoOscuro, setModoOscuro] = useState(() => {
     if (typeof window === "undefined") {
       return false;
@@ -49,6 +58,7 @@ function App() {
   });
 
   useEffect(() => {
+    // Se persiste el tema para mantener la preferencia del usuario entre recargas.
     document.body.classList.toggle("dark", modoOscuro);
     localStorage.setItem("xbank-theme", modoOscuro ? "dark" : "light");
   }, [modoOscuro]);
@@ -132,6 +142,8 @@ function App() {
   const handleAuthSubmit = async (event) => {
     event.preventDefault();
 
+    // Se valida antes de tocar Firebase para evitar llamadas innecesarias y dar feedback inmediato.
+
     if (!email.trim() || !password) {
       setError("Completa tu correo y contraseña.");
       return;
@@ -176,6 +188,7 @@ function App() {
   };
 
   const resetForms = () => {
+    // Se limpian los campos al cambiar entre login y registro para no mezclar estados anteriores.
     setEmail("");
     setPassword("");
     setNombre("");
@@ -232,6 +245,7 @@ function App() {
     setDepositoProcesando(true);
 
     try {
+      // La transacción asegura que saldo e historial se actualicen como una sola operación atómica.
       const usuarioRef = doc(db, "users", usuario.uid);
       const movimientoRef = doc(collection(db, "movimientos"));
 
@@ -244,6 +258,7 @@ function App() {
 
         const saldoActual = Number(usuarioSnapshot.data().saldo ?? 0);
         transaccion.update(usuarioRef, { saldo: saldoActual + monto });
+        // Se registra el depósito para que también aparezca en el historial filtrable.
         transaccion.set(movimientoRef, {
           emisorUid: "sistema",
           receptorUid: usuario.uid,
@@ -302,6 +317,7 @@ function App() {
     setRetiroProcesando(true);
 
     try {
+      // La transacción evita inconsistencias si el saldo cambia mientras se procesa el retiro.
       const usuarioRef = doc(db, "users", usuario.uid);
       const movimientoRef = doc(collection(db, "movimientos"));
 
@@ -319,6 +335,7 @@ function App() {
         }
 
         transaccion.update(usuarioRef, { saldo: saldoActual - monto });
+        // Se registra el retiro para mantener el historial consistente con el saldo.
         transaccion.set(movimientoRef, {
           emisorUid: usuario.uid,
           receptorUid: "sistema",
@@ -378,6 +395,8 @@ function App() {
     setTransferenciaError("");
     setTransferenciaExito("");
 
+    // La validación local protege reglas básicas del negocio antes de descontar o abonar saldo.
+
     if (!destinatarioId) {
       setTransferenciaError("Selecciona a un destinatario para transferir.");
       return;
@@ -408,6 +427,7 @@ function App() {
     setTransferenciaProcesando(true);
 
     try {
+      // Se actualizan ambos usuarios y el movimiento en una sola transacción para no dejar saldos desfasados.
       const emisorRef = doc(db, "users", usuario.uid);
       const receptorRef = doc(db, "users", destinatarioId);
       const movimientoRef = doc(collection(db, "movimientos"));
@@ -495,6 +515,7 @@ function App() {
   };
 
   const obtenerContraparte = (movimiento) => {
+    // Depósitos y retiros no tienen otro usuario real, por eso se muestran como cuenta propia.
     if (movimiento.tipo === "deposito" || movimiento.tipo === "retiro") {
       return "Cuenta propia";
     }
@@ -539,6 +560,7 @@ function App() {
   };
 
   const obtenerTipoFiltroMovimiento = (movimiento) => {
+    // Se traduce cada movimiento al valor exacto que usa el select del filtro por tipo.
     if (movimiento.tipo === "deposito") {
       return "deposito";
     }
@@ -551,6 +573,7 @@ function App() {
   };
 
   const movimientosFiltrados = movimientos.filter((movimiento) => {
+    // Los filtros se aplican en memoria porque el historial ya está sincronizado en tiempo real.
     const tipoMovimiento = obtenerTipoFiltroMovimiento(movimiento);
     const fechaMovimiento = movimiento.fecha?.toDate ? movimiento.fecha.toDate() : new Date(movimiento.fecha || 0);
     const mesMovimiento = fechaMovimiento.getMonth() + 1;
@@ -590,6 +613,7 @@ function App() {
   if (!usuario) {
     return (
       <div className={`app ${modoOscuro ? "app-dark" : ""}`}>
+        {/* Si no hay sesión activa, solo se muestra el formulario de acceso o registro. */}
         <form className={`auth-card ${modoOscuro ? "card-dark" : ""}`} onSubmit={handleAuthSubmit}>
           <div className="auth-header">
             <h1>XBank</h1>
@@ -630,6 +654,7 @@ function App() {
   return (
     <div className={`app ${modoOscuro ? "app-dark" : ""}`}>
       <div className={`dashboard-card ${modoOscuro ? "card-dark" : ""}`}>
+        {/* Con sesión activa se habilitan saldo, operaciones y el historial en tiempo real. */}
         <div className="dashboard-header">
           <div>
             <p className="eyebrow">Bienvenido a XBank</p>
