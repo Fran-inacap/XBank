@@ -80,14 +80,16 @@
 
 .saldo-card,
 .transfer-card,
-.history-card {
+.history-card,
+.operation-card {
   border-radius: 16px;
   padding: 18px;
   background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
 }
 
 .transfer-card,
-.history-card {
+.history-card,
+.operation-card {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
 }
@@ -132,6 +134,13 @@
 .transfer-actions {
   display: flex;
   justify-content: flex-end;
+}
+
+.operation-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-start;
 }
 
 .transfer-empty {

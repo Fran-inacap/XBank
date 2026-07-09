@@ -59,14 +59,23 @@ Validaciones mínimas:
 - El movimiento se registra con fecha y hora para el emisor y el receptor.
 
 4. Historial de movimientos
-Lista de movimientos del usuario (enviados y recibidos), ordenada del más reciente al más antiguo, también en tiempo real. Cada movimiento muestra fecha, contraparte, monto y tipo (envío/recepción).
+- Lista de movimientos del usuario (enviados y recibidos)
+- Ordenado por fecha y hora, desde el más reciente al más antiguo.
+- Debe estar en un botón aparte ("Ver movimientos").
+- Mostrar fecha y hora (juntos), contraparte (quien envió o recibió), el monto y el tipo de movimiento (envío o recepción).
 
 5. Cerrar sesión
 Botón de logout que limpia el estado y devuelve al login. Ojo: al cerrar sesión deben cancelarse las suscripciones activas.
 
 6. Depósito/retiro simulado (botones que modifican el saldo con validación).
+- Botón para depositar dinero. Debe indicar monto y debe ser a la propia cuenta.
+- Botón para retirar dinero. Debe indicar monto y debe ser con cargo a la propia cuenta.
+- Solicitar confirmación del usuario para realizar depósito o retiro
 
 7. Filtro o búsqueda en el historial (por tipo, fecha o contraparte).
+
+- Agregar filtro en el apartado de "Movimientos". Debe poder realizarse búsqueda por tipo (recepción o envío), fecha (mes), o la contraparte (menú dropdown de quienes han enviado/recbido dinero).
+- Los filtros deben poder aplicarse más de uno a la vez
 
 8. Modo oscuro persistente o diseño destacable (que se note intención, no solo Bootstrap por defecto).
 
