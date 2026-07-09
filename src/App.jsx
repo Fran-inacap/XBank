@@ -12,6 +12,8 @@ function App() {
   const [usuariosPorId, setUsuariosPorId] = useState({});
   const [mostrarFormularioTransferencia, setMostrarFormularioTransferencia] = useState(false);
   const [mostrarHistorial, setMostrarHistorial] = useState(false);
+  const [mostrarFormularioDeposito, setMostrarFormularioDeposito] = useState(false);
+  const [mostrarFormularioRetiro, setMostrarFormularioRetiro] = useState(false);
   const [movimientos, setMovimientos] = useState([]);
   const [movimientosCargando, setMovimientosCargando] = useState(true);
   const [movimientosError, setMovimientosError] = useState("");
@@ -339,6 +341,20 @@ function App() {
     setMovimientosError("");
   };
 
+  const handleDepositoToggle = () => {
+    // Cada operación se muestra de forma independiente para separar depósito y retiro.
+    setMostrarFormularioDeposito((valorActual) => !valorActual);
+    setDepositoError("");
+    setDepositoExito("");
+  };
+
+  const handleRetiroToggle = () => {
+    // Cada operación se muestra de forma independiente para separar depósito y retiro.
+    setMostrarFormularioRetiro((valorActual) => !valorActual);
+    setRetiroError("");
+    setRetiroExito("");
+  };
+
   const handleTransferSubmit = async (event) => {
     event.preventDefault();
     setTransferenciaError("");
@@ -444,10 +460,20 @@ function App() {
       return "Fecha no disponible";
     }
 
-    return new Intl.DateTimeFormat("es-CL", {
-      dateStyle: "medium",
-      timeStyle: "short",
+    // Se separan fecha y hora para cumplir con el formato largo solicitado y forzar reloj de 24 horas.
+    const fechaFormateada = new Intl.DateTimeFormat("es-CL", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
     }).format(fechaValor);
+
+    const horaFormateada = new Intl.DateTimeFormat("es-CL", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).format(fechaValor);
+
+    return `${fechaFormateada} · ${horaFormateada}`;
   };
 
   const obtenerContraparte = (movimiento) => {
@@ -570,7 +596,6 @@ function App() {
           ) : (
             <>
               <p className="saldo-value">{formatearSaldo(perfil?.saldo)}</p>
-              <p className="saldo-subtitle">Se actualiza automáticamente desde Firestore.</p>
             </>
           )}
         </div>
@@ -642,52 +667,74 @@ function App() {
 
           <p className="transfer-empty">Gestiona tu saldo con operaciones simuladas y confirmación.</p>
 
-          <div className="operation-section">
-            <h3>Depositar</h3>
-            <label className="transfer-field">
-              Monto
-              <input
-                type="number"
-                min="1"
-                step="1"
-                value={montoDeposito}
-                onChange={handleDepositoAmountChange}
-                placeholder="5000"
-              />
-            </label>
+          <div className="operation-grid">
+            <div className="operation-section">
+              <div className="transfer-header">
+                <h3>Depositar dinero</h3>
+                <button type="button" className="secondary-btn" onClick={handleDepositoToggle}>
+                  {mostrarFormularioDeposito ? "Ocultar" : "Depositar"}
+                </button>
+              </div>
 
-            <div className="operation-actions">
-              <button type="button" onClick={handleDepositoSubmit} disabled={depositoProcesando || !montoDeposito}>
-                {depositoProcesando ? "Procesando..." : "Depositar"}
-              </button>
+              {mostrarFormularioDeposito && (
+                <div className="transfer-form">
+                  <label className="transfer-field">
+                    Monto
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={montoDeposito}
+                      onChange={handleDepositoAmountChange}
+                      placeholder="5000"
+                    />
+                  </label>
+
+                  <div className="operation-actions">
+                    <button type="button" onClick={handleDepositoSubmit} disabled={depositoProcesando || !montoDeposito}>
+                      {depositoProcesando ? "Procesando..." : "Confirmar depósito"}
+                    </button>
+                  </div>
+
+                  {depositoError && <p className="feedback feedback-error">{depositoError}</p>}
+                  {depositoExito && <p className="feedback">{depositoExito}</p>}
+                </div>
+              )}
             </div>
 
-            {depositoError && <p className="feedback feedback-error">{depositoError}</p>}
-            {depositoExito && <p className="feedback">{depositoExito}</p>}
-          </div>
+            <div className="operation-section">
+              <div className="transfer-header">
+                <h3>Retirar dinero</h3>
+                <button type="button" className="secondary-btn" onClick={handleRetiroToggle}>
+                  {mostrarFormularioRetiro ? "Ocultar" : "Retirar"}
+                </button>
+              </div>
 
-          <div className="operation-section">
-            <h3>Retirar</h3>
-            <label className="transfer-field">
-              Monto
-              <input
-                type="number"
-                min="1"
-                step="1"
-                value={montoRetiro}
-                onChange={handleRetiroAmountChange}
-                placeholder="5000"
-              />
-            </label>
+              {mostrarFormularioRetiro && (
+                <div className="transfer-form">
+                  <label className="transfer-field">
+                    Monto
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={montoRetiro}
+                      onChange={handleRetiroAmountChange}
+                      placeholder="5000"
+                    />
+                  </label>
 
-            <div className="operation-actions">
-              <button type="button" className="secondary-btn" onClick={handleRetiroSubmit} disabled={retiroProcesando || !montoRetiro}>
-                {retiroProcesando ? "Procesando..." : "Retirar"}
-              </button>
+                  <div className="operation-actions">
+                    <button type="button" className="secondary-btn" onClick={handleRetiroSubmit} disabled={retiroProcesando || !montoRetiro}>
+                      {retiroProcesando ? "Procesando..." : "Confirmar retiro"}
+                    </button>
+                  </div>
+
+                  {retiroError && <p className="feedback feedback-error">{retiroError}</p>}
+                  {retiroExito && <p className="feedback">{retiroExito}</p>}
+                </div>
+              )}
             </div>
-
-            {retiroError && <p className="feedback feedback-error">{retiroError}</p>}
-            {retiroExito && <p className="feedback">{retiroExito}</p>}
           </div>
         </div>
 

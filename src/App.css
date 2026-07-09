@@ -254,6 +254,13 @@ body.dark {
   justify-content: flex-start;
 }
 
+.operation-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
 .operation-section {
   display: flex;
   flex-direction: column;
@@ -276,6 +283,10 @@ body.dark {
 
 .card-dark .operation-section h3 {
   color: #f8fafc;
+}
+
+.operation-section .transfer-header h3 {
+  margin: 0;
 }
 
 .transfer-empty {
