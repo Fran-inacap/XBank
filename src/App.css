@@ -1,8 +1,25 @@
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: #f8fafc;
+  color: #0f172a;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+body.dark {
+  background: #020617;
+  color: #e2e8f0;
+}
+
 .app {
   max-width: 720px;
   margin: 40px auto;
   font-family: system-ui, sans-serif;
   padding: 0 16px;
+}
+
+.app-dark {
+  color-scheme: dark;
 }
 
 .auth-card,
@@ -15,6 +32,47 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.card-dark {
+  background: #0f172a;
+  border-color: #334155;
+  box-shadow: 0 10px 30px rgba(2, 6, 23, 0.45);
+}
+
+.card-dark input,
+.card-dark select,
+.card-dark button,
+.card-dark .secondary-btn,
+.card-dark .theme-toggle {
+  color: #e2e8f0;
+}
+
+.card-dark input,
+.card-dark select {
+  background: #111827;
+  border-color: #475569;
+}
+
+.card-dark .secondary-btn {
+  background: #334155;
+  color: #f8fafc;
+}
+
+.card-dark .feedback {
+  background: #14532d;
+  color: #dcfce7;
+}
+
+.card-dark .feedback-error {
+  background: #7f1d1d;
+  color: #fee2e2;
+}
+
+.card-dark .history-item,
+.card-dark .filter-field select {
+  background: #111827;
+  border-color: #475569;
 }
 
 .auth-card h1,
@@ -70,6 +128,28 @@
   gap: 12px;
 }
 
+.dashboard-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.theme-toggle {
+  padding: 10px 14px;
+  border: none;
+  border-radius: 999px;
+  background: #1d4ed8;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.theme-toggle-dark {
+  background: #38bdf8;
+  color: #082f49;
+}
+
 .eyebrow {
   margin: 0 0 4px;
   font-size: 0.9rem;
@@ -92,6 +172,15 @@
 .operation-card {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
+}
+
+.card-dark .saldo-card,
+.card-dark .transfer-card,
+.card-dark .history-card,
+.card-dark .operation-card {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border-color: #334155;
+  color: #e2e8f0;
 }
 
 .saldo-label {
@@ -151,6 +240,30 @@
 
 .history-content {
   margin-top: 12px;
+}
+
+.history-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.filter-field select {
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: white;
+  color: #0f172a;
 }
 
 .history-list {

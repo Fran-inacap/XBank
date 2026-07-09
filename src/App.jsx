@@ -26,6 +26,9 @@ function App() {
   const [montoTransferencia, setMontoTransferencia] = useState("");
   const [descripcionTransferencia, setDescripcionTransferencia] = useState("");
   const [montoOperacion, setMontoOperacion] = useState("");
+  const [filtroTipo, setFiltroTipo] = useState("todos");
+  const [filtroMes, setFiltroMes] = useState("todos");
+  const [filtroContraparte, setFiltroContraparte] = useState("todos");
   const [error, setError] = useState("");
   const [perfilError, setPerfilError] = useState("");
   const [transferenciaError, setTransferenciaError] = useState("");
@@ -35,6 +38,18 @@ function App() {
   const [procesando, setProcesando] = useState(false);
   const [transferenciaProcesando, setTransferenciaProcesando] = useState(false);
   const [operacionProcesando, setOperacionProcesando] = useState(false);
+  const [modoOscuro, setModoOscuro] = useState(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+
+    return localStorage.getItem("xbank-theme") === "dark";
+  });
+
+  useEffect(() => {
+    document.body.classList.toggle("dark", modoOscuro);
+    localStorage.setItem("xbank-theme", modoOscuro ? "dark" : "light");
+  }, [modoOscuro]);
 
   useEffect(() => {
     // Se suscribe al estado de autenticación para saber si hay un usuario activo.
@@ -443,14 +458,47 @@ function App() {
     return "Usuario externo";
   };
 
+  const movimientosFiltrados = movimientos.filter((movimiento) => {
+    const esEnvio = movimiento.emisorUid === usuario?.uid;
+    const fechaMovimiento = movimiento.fecha?.toDate ? movimiento.fecha.toDate() : new Date(movimiento.fecha || 0);
+    const mesMovimiento = fechaMovimiento.getMonth() + 1;
+    const nombreContraparte = obtenerContraparte(movimiento);
+
+    if (filtroTipo !== "todos" && (filtroTipo === "envio" ? !esEnvio : esEnvio)) {
+      return false;
+    }
+
+    if (filtroMes !== "todos") {
+      const mesSeleccionado = Number(filtroMes);
+      if (mesMovimiento !== mesSeleccionado) {
+        return false;
+      }
+    }
+
+    if (filtroContraparte !== "todos" && nombreContraparte !== filtroContraparte) {
+      return false;
+    }
+
+    return true;
+  });
+
+  const opcionesMeses = Array.from({ length: 12 }, (_, index) => ({
+    value: String(index + 1),
+    label: new Date(2026, index, 1).toLocaleString("es-CL", { month: "long" }),
+  }));
+
+  const opcionesContraparte = Array.from(
+    new Set(movimientos.map((movimiento) => obtenerContraparte(movimiento)))
+  ).sort();
+
   if (cargando) {
     return <div className="app loading">Cargando...</div>;
   }
 
   if (!usuario) {
     return (
-      <div className="app">
-        <form className="auth-card" onSubmit={handleAuthSubmit}>
+      <div className={`app ${modoOscuro ? "app-dark" : ""}`}>
+        <form className={`auth-card ${modoOscuro ? "card-dark" : ""}`} onSubmit={handleAuthSubmit}>
           <div className="auth-header">
             <h1>XBank</h1>
             <p>Gestiona tu dinero con seguridad</p>
@@ -488,16 +536,21 @@ function App() {
   }
 
   return (
-    <div className="app">
-      <div className="dashboard-card">
+    <div className={`app ${modoOscuro ? "app-dark" : ""}`}>
+      <div className={`dashboard-card ${modoOscuro ? "card-dark" : ""}`}>
         <div className="dashboard-header">
           <div>
             <p className="eyebrow">Bienvenido a XBank</p>
             <h1>{perfil?.nombre || usuario.email}</h1>
           </div>
-          <button type="button" className="secondary-btn" onClick={handleLogout}>
-            Cerrar sesión
-          </button>
+          <div className="dashboard-actions">
+            <button type="button" className={`theme-toggle ${modoOscuro ? "theme-toggle-dark" : ""}`} onClick={() => setModoOscuro((valorActual) => !valorActual)}>
+              {modoOscuro ? "☀️ Claro" : "🌙 Oscuro"}
+            </button>
+            <button type="button" className="secondary-btn" onClick={handleLogout}>
+              Cerrar sesión
+            </button>
+          </div>
         </div>
 
         <div className="saldo-card">
@@ -629,28 +682,69 @@ function App() {
               ) : movimientos.length === 0 ? (
                 <p className="transfer-empty">No hay movimientos registrados todavía.</p>
               ) : (
-                <ul className="history-list">
-                  {movimientos.map((movimiento) => {
-                    const esEnvio = movimiento.emisorUid === usuario.uid;
+                <>
+                  <div className="history-filters">
+                    <label className="filter-field">
+                      Tipo
+                      <select value={filtroTipo} onChange={(event) => setFiltroTipo(event.target.value)}>
+                        <option value="todos">Todos</option>
+                        <option value="envio">Envío</option>
+                        <option value="recepcion">Recepción</option>
+                      </select>
+                    </label>
 
-                    return (
-                      <li key={movimiento.id} className="history-item">
-                        <div>
-                          <p className="history-title">
-                            {esEnvio ? "Envío" : "Recepción"} · {obtenerContraparte(movimiento)}
-                          </p>
-                          <p className="history-meta">
-                            {formatearFechaHora(movimiento.fecha)} · {movimiento.descripcion || "Sin descripción"}
-                          </p>
-                        </div>
-                        <p className={`history-amount ${esEnvio ? "negative" : "positive"}`}>
-                          {esEnvio ? "-" : "+"}
-                          {formatearSaldo(movimiento.monto)}
-                        </p>
-                      </li>
-                    );
-                  })}
-                </ul>
+                    <label className="filter-field">
+                      Mes
+                      <select value={filtroMes} onChange={(event) => setFiltroMes(event.target.value)}>
+                        <option value="todos">Todos</option>
+                        {opcionesMeses.map((mes) => (
+                          <option key={mes.value} value={mes.value}>
+                            {mes.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label className="filter-field">
+                      Contraparte
+                      <select value={filtroContraparte} onChange={(event) => setFiltroContraparte(event.target.value)}>
+                        <option value="todos">Todas</option>
+                        {opcionesContraparte.map((contraparte) => (
+                          <option key={contraparte} value={contraparte}>
+                            {contraparte}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+
+                  {movimientosFiltrados.length === 0 ? (
+                    <p className="transfer-empty">No hay movimientos con esos filtros.</p>
+                  ) : (
+                    <ul className="history-list">
+                      {movimientosFiltrados.map((movimiento) => {
+                        const esEnvio = movimiento.emisorUid === usuario.uid;
+
+                        return (
+                          <li key={movimiento.id} className="history-item">
+                            <div>
+                              <p className="history-title">
+                                {esEnvio ? "Envío" : "Recepción"} · {obtenerContraparte(movimiento)}
+                              </p>
+                              <p className="history-meta">
+                                {formatearFechaHora(movimiento.fecha)} · {movimiento.descripcion || "Sin descripción"}
+                              </p>
+                            </div>
+                            <p className={`history-amount ${esEnvio ? "negative" : "positive"}`}>
+                              {esEnvio ? "-" : "+"}
+                              {formatearSaldo(movimiento.monto)}
+                            </p>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </>
               )}
             </div>
           )}
