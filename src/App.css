@@ -254,6 +254,30 @@ body.dark {
   justify-content: flex-start;
 }
 
+.operation-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.operation-section h3 {
+  margin: 0;
+  color: #0f172a;
+}
+
+.card-dark .operation-section {
+  background: rgba(15, 23, 42, 0.8);
+  border-color: #334155;
+}
+
+.card-dark .operation-section h3 {
+  color: #f8fafc;
+}
+
 .transfer-empty {
   margin: 0;
   color: #64748b;

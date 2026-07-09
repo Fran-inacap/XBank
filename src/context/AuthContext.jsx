@@ -104,18 +104,23 @@ export function AuthProvider({ children }) {
 
     const credentials = await createUserWithEmailAndPassword(auth, email, password);
     const profileRef = doc(db, "users", credentials.user.uid);
+    const profileData = {
+      nombre: nombre.trim(),
+      email: email.trim().toLowerCase(),
+      saldo: SALDO_INICIAL,
+      creadoEn: serverTimestamp(),
+    };
+
+    dispatch({ type: "SET_AUTH_USER", payload: credentials.user });
+    dispatch({ type: "SET_PROFILE", payload: { id: credentials.user.uid, ...profileData } });
+    dispatch({ type: "SET_PROFILE_ERROR", payload: "" });
+
     const profileSnapshot = await getDoc(profileRef);
 
     if (!profileSnapshot.exists()) {
-      await setDoc(profileRef, {
-        nombre: nombre.trim(),
-        email: email.trim().toLowerCase(),
-        saldo: SALDO_INICIAL,
-        creadoEn: serverTimestamp(),
-      });
+      await setDoc(profileRef, profileData);
     }
 
-    dispatch({ type: "SET_AUTH_USER", payload: credentials.user });
     return credentials;
   };
 

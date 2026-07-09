@@ -22,18 +22,22 @@ function App() {
   const [destinatarioId, setDestinatarioId] = useState("");
   const [montoTransferencia, setMontoTransferencia] = useState("");
   const [descripcionTransferencia, setDescripcionTransferencia] = useState("");
-  const [montoOperacion, setMontoOperacion] = useState("");
+  const [montoDeposito, setMontoDeposito] = useState("");
+  const [montoRetiro, setMontoRetiro] = useState("");
   const [filtroTipo, setFiltroTipo] = useState("todos");
   const [filtroMes, setFiltroMes] = useState("todos");
   const [filtroContraparte, setFiltroContraparte] = useState("todos");
   const [error, setError] = useState("");
   const [transferenciaError, setTransferenciaError] = useState("");
   const [transferenciaExito, setTransferenciaExito] = useState("");
-  const [operacionError, setOperacionError] = useState("");
-  const [operacionExito, setOperacionExito] = useState("");
+  const [depositoError, setDepositoError] = useState("");
+  const [depositoExito, setDepositoExito] = useState("");
+  const [retiroError, setRetiroError] = useState("");
+  const [retiroExito, setRetiroExito] = useState("");
   const [procesando, setProcesando] = useState(false);
   const [transferenciaProcesando, setTransferenciaProcesando] = useState(false);
-  const [operacionProcesando, setOperacionProcesando] = useState(false);
+  const [depositoProcesando, setDepositoProcesando] = useState(false);
+  const [retiroProcesando, setRetiroProcesando] = useState(false);
   const [modoOscuro, setModoOscuro] = useState(() => {
     if (typeof window === "undefined") {
       return false;
@@ -186,44 +190,44 @@ function App() {
     }
   };
 
-  const handleOperacionAmountChange = (event) => {
-    setMontoOperacion(event.target.value);
+  const handleDepositoAmountChange = (event) => {
+    setMontoDeposito(event.target.value);
 
-    if (operacionError) {
-      setOperacionError("");
+    if (depositoError) {
+      setDepositoError("");
     }
   };
 
-  const handleOperacionSubmit = async (tipo) => {
-    const monto = Number(montoOperacion);
+  const handleRetiroAmountChange = (event) => {
+    setMontoRetiro(event.target.value);
+
+    if (retiroError) {
+      setRetiroError("");
+    }
+  };
+
+  const handleDepositoSubmit = async () => {
+    const monto = Number(montoDeposito);
 
     if (!Number.isFinite(monto) || monto <= 0) {
-      setOperacionError("Ingresa un monto válido mayor a cero.");
+      setDepositoError("Ingresa un monto válido mayor a cero.");
       return;
     }
 
     if (!perfil?.saldo && perfil?.saldo !== 0) {
-      setOperacionError("Aún no se cargó tu saldo. Intenta de nuevo en unos segundos.");
+      setDepositoError("Aún no se cargó tu saldo. Intenta de nuevo en unos segundos.");
       return;
     }
 
-    if (tipo === "retiro" && monto > Number(perfil.saldo)) {
-      setOperacionError("No tienes saldo suficiente para realizar este retiro.");
-      return;
-    }
-
-    const mensajeConfirmacion = tipo === "deposito"
-      ? `¿Deseas confirmar un depósito de ${formatearSaldo(monto)} en tu cuenta?`
-      : `¿Deseas confirmar un retiro de ${formatearSaldo(monto)} de tu cuenta?`;
-    const confirmado = window.confirm(mensajeConfirmacion);
+    const confirmado = window.confirm(`¿Deseas confirmar un depósito de ${formatearSaldo(monto)} en tu cuenta?`);
 
     if (!confirmado) {
       return;
     }
 
-    setOperacionError("");
-    setOperacionExito("");
-    setOperacionProcesando(true);
+    setDepositoError("");
+    setDepositoExito("");
+    setDepositoProcesando(true);
 
     try {
       const usuarioRef = doc(db, "users", usuario.uid);
@@ -236,13 +240,7 @@ function App() {
         }
 
         const saldoActual = Number(usuarioSnapshot.data().saldo ?? 0);
-        const saldoNuevo = tipo === "deposito" ? saldoActual + monto : saldoActual - monto;
-
-        if (tipo === "retiro" && saldoActual < monto) {
-          throw new Error("No tienes saldo suficiente para realizar este retiro.");
-        }
-
-        transaccion.update(usuarioRef, { saldo: saldoNuevo });
+        transaccion.update(usuarioRef, { saldo: saldoActual + monto });
       });
 
       updateProfile((perfilActual) => {
@@ -250,20 +248,83 @@ function App() {
           return perfilActual;
         }
 
-        const saldoActual = Number(perfilActual.saldo ?? 0);
-        const saldoNuevo = tipo === "deposito" ? saldoActual + monto : saldoActual - monto;
+        return {
+          ...perfilActual,
+          saldo: Number(perfilActual.saldo ?? 0) + monto,
+        };
+      });
+      setMontoDeposito("");
+      setDepositoExito("Depósito realizado con éxito.");
+    } catch (operacionCatchError) {
+      setDepositoError(operacionCatchError.message || "No se pudo completar la operación.");
+    } finally {
+      setDepositoProcesando(false);
+    }
+  };
+
+  const handleRetiroSubmit = async () => {
+    const monto = Number(montoRetiro);
+
+    if (!Number.isFinite(monto) || monto <= 0) {
+      setRetiroError("Ingresa un monto válido mayor a cero.");
+      return;
+    }
+
+    if (!perfil?.saldo && perfil?.saldo !== 0) {
+      setRetiroError("Aún no se cargó tu saldo. Intenta de nuevo en unos segundos.");
+      return;
+    }
+
+    if (monto > Number(perfil.saldo)) {
+      setRetiroError("No tienes saldo suficiente para realizar este retiro.");
+      return;
+    }
+
+    const confirmado = window.confirm(`¿Deseas confirmar un retiro de ${formatearSaldo(monto)} de tu cuenta?`);
+
+    if (!confirmado) {
+      return;
+    }
+
+    setRetiroError("");
+    setRetiroExito("");
+    setRetiroProcesando(true);
+
+    try {
+      const usuarioRef = doc(db, "users", usuario.uid);
+
+      await runTransaction(db, async (transaccion) => {
+        const usuarioSnapshot = await transaccion.get(usuarioRef);
+
+        if (!usuarioSnapshot.exists()) {
+          throw new Error("Tu perfil ya no está disponible.");
+        }
+
+        const saldoActual = Number(usuarioSnapshot.data().saldo ?? 0);
+
+        if (saldoActual < monto) {
+          throw new Error("No tienes saldo suficiente para realizar este retiro.");
+        }
+
+        transaccion.update(usuarioRef, { saldo: saldoActual - monto });
+      });
+
+      updateProfile((perfilActual) => {
+        if (!perfilActual) {
+          return perfilActual;
+        }
 
         return {
           ...perfilActual,
-          saldo: saldoNuevo,
+          saldo: Number(perfilActual.saldo ?? 0) - monto,
         };
       });
-      setMontoOperacion("");
-      setOperacionExito(tipo === "deposito" ? "Depósito realizado con éxito." : "Retiro realizado con éxito.");
+      setMontoRetiro("");
+      setRetiroExito("Retiro realizado con éxito.");
     } catch (operacionCatchError) {
-      setOperacionError(operacionCatchError.message || "No se pudo completar la operación.");
+      setRetiroError(operacionCatchError.message || "No se pudo completar la operación.");
     } finally {
-      setOperacionProcesando(false);
+      setRetiroProcesando(false);
     }
   };
 
@@ -504,7 +565,7 @@ function App() {
 
           {perfilCargando ? (
             <p className="saldo-value">Cargando saldo...</p>
-          ) : perfilErrorContext ? (
+          ) : perfilErrorContext && !perfil ? (
             <p className="feedback feedback-error">{perfilErrorContext}</p>
           ) : (
             <>
@@ -581,34 +642,53 @@ function App() {
 
           <p className="transfer-empty">Gestiona tu saldo con operaciones simuladas y confirmación.</p>
 
-          <label className="transfer-field">
-            Monto
-            <input
-              type="number"
-              min="1"
-              step="1"
-              value={montoOperacion}
-              onChange={handleOperacionAmountChange}
-              placeholder="5000"
-            />
-          </label>
+          <div className="operation-section">
+            <h3>Depositar</h3>
+            <label className="transfer-field">
+              Monto
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={montoDeposito}
+                onChange={handleDepositoAmountChange}
+                placeholder="5000"
+              />
+            </label>
 
-          <div className="operation-actions">
-            <button type="button" onClick={() => handleOperacionSubmit("deposito")} disabled={operacionProcesando || !montoOperacion}>
-              {operacionProcesando ? "Procesando..." : "Depositar"}
-            </button>
-            <button
-              type="button"
-              className="secondary-btn"
-              onClick={() => handleOperacionSubmit("retiro")}
-              disabled={operacionProcesando || !montoOperacion}
-            >
-              {operacionProcesando ? "Procesando..." : "Retirar"}
-            </button>
+            <div className="operation-actions">
+              <button type="button" onClick={handleDepositoSubmit} disabled={depositoProcesando || !montoDeposito}>
+                {depositoProcesando ? "Procesando..." : "Depositar"}
+              </button>
+            </div>
+
+            {depositoError && <p className="feedback feedback-error">{depositoError}</p>}
+            {depositoExito && <p className="feedback">{depositoExito}</p>}
           </div>
 
-          {operacionError && <p className="feedback feedback-error">{operacionError}</p>}
-          {operacionExito && <p className="feedback">{operacionExito}</p>}
+          <div className="operation-section">
+            <h3>Retirar</h3>
+            <label className="transfer-field">
+              Monto
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={montoRetiro}
+                onChange={handleRetiroAmountChange}
+                placeholder="5000"
+              />
+            </label>
+
+            <div className="operation-actions">
+              <button type="button" className="secondary-btn" onClick={handleRetiroSubmit} disabled={retiroProcesando || !montoRetiro}>
+                {retiroProcesando ? "Procesando..." : "Retirar"}
+              </button>
+            </div>
+
+            {retiroError && <p className="feedback feedback-error">{retiroError}</p>}
+            {retiroExito && <p className="feedback">{retiroExito}</p>}
+          </div>
         </div>
 
         <div className="history-card">
