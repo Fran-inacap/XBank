@@ -132,4 +132,33 @@ describe("Login", () => {
     expect(historyItems[1]).toHaveTextContent(/pago enviado/i);
     expect(historyItems[1]).toHaveTextContent(/envío/i);
   });
+
+  it("distingue envíos de recepciones en el historial", async () => {
+    const user = userEvent.setup();
+
+    mockUseAuth.mockReturnValue({
+      user: { uid: "user-1", email: "origen@correo.com" },
+      profile: { saldo: 1000 },
+      loading: false,
+      profileLoading: false,
+      profileError: "",
+      error: "",
+      login: loginSpy,
+      register: vi.fn(),
+      logout: vi.fn(),
+      updateProfile: vi.fn(),
+      clearError: vi.fn(),
+    });
+
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: /ver movimientos/i }));
+
+    const historyItems = await screen.findAllByRole("listitem");
+
+    expect(historyItems[0]).toHaveTextContent(/recepción\s*·\s*usuario externo/i);
+    expect(historyItems[0]).toHaveTextContent(/\+\$250/);
+    expect(historyItems[1]).toHaveTextContent(/envío\s*·\s*usuario externo/i);
+    expect(historyItems[1]).toHaveTextContent(/-\$100/);
+  });
 });
