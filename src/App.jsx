@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { collection, doc, onSnapshot, runTransaction, serverTimestamp } from "firebase/firestore";
 import { db } from "./firebase";
 import { useAuth } from "./context/AuthContext";
-import { validarMontoTransferencia } from "./utils/validacionesTransferencia";
+import { validarTransferencia } from "./utils/validacionesTransferencia";
 import "./App.css";
 
 const SALDO_INICIAL = 100000;
@@ -403,29 +403,20 @@ function App() {
       return;
     }
 
-    const validacionMonto = validarMontoTransferencia(montoTransferencia);
+    const destinatarioSeleccionado = usuariosPorId[destinatarioId];
+    const validacionTransferencia = validarTransferencia({
+      montoIngresado: montoTransferencia,
+      saldoDisponible: perfil?.saldo,
+      destinatarioEmail: destinatarioSeleccionado?.email,
+      usuarioEmail: usuario?.email,
+    });
 
-    if (!validacionMonto.valido) {
-      setTransferenciaError(validacionMonto.error);
+    if (!validacionTransferencia.valido) {
+      setTransferenciaError(validacionTransferencia.error);
       return;
     }
 
-    const monto = validacionMonto.monto;
-
-    if (!perfil?.saldo && perfil?.saldo !== 0) {
-      setTransferenciaError("Aún no se cargó tu saldo. Intenta de nuevo en unos segundos.");
-      return;
-    }
-
-    if (monto > Number(perfil.saldo)) {
-      setTransferenciaError("No tienes saldo suficiente para realizar esta transferencia.");
-      return;
-    }
-
-    if (destinatarioId === usuario.uid) {
-      setTransferenciaError("No puedes transferirte dinero a ti mismo.");
-      return;
-    }
+    const monto = validacionTransferencia.monto;
 
     setTransferenciaProcesando(true);
 
