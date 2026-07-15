@@ -6,7 +6,7 @@ const config: Config = {
   // Usamos jsdom para simular un navegador en los tests
   testEnvironment: 'jsdom',
   // Archivo que se ejecuta DESPUES de configurar el entorno de test
-  setupFilesAfterSetup: [
+  setupFilesAfterEnv: [
     '<rootDir>/src/setupTests.ts'
   ],
   // Mapeo de modulos: reemplaza imports de CSS por un objeto vacio
