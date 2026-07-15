@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { collection, doc, onSnapshot, runTransaction, serverTimestamp } from "firebase/firestore";
 import { db } from "./firebase";
 import { useAuth } from "./context/AuthContext";
+import { validarMontoTransferencia } from "./utils/validacionesTransferencia";
 import "./App.css";
 
 const SALDO_INICIAL = 100000;
@@ -402,12 +403,14 @@ function App() {
       return;
     }
 
-    const monto = Number(montoTransferencia);
+    const validacionMonto = validarMontoTransferencia(montoTransferencia);
 
-    if (!Number.isFinite(monto) || monto <= 0) {
-      setTransferenciaError("Ingresa un monto válido mayor a cero.");
+    if (!validacionMonto.valido) {
+      setTransferenciaError(validacionMonto.error);
       return;
     }
+
+    const monto = validacionMonto.monto;
 
     if (!perfil?.saldo && perfil?.saldo !== 0) {
       setTransferenciaError("Aún no se cargó tu saldo. Intenta de nuevo en unos segundos.");
