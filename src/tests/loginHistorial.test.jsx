@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import App from "../App";
 
 const mockUseAuth = vi.fn();
+const mockOnSnapshot = vi.fn();
 let loginSpy;
 
 vi.mock("../context/AuthContext", () => ({
@@ -15,11 +16,11 @@ vi.mock("../firebase", () => ({
 }));
 
 vi.mock("firebase/firestore", () => ({
-  collection: vi.fn(),
-  doc: vi.fn(),
-  onSnapshot: vi.fn(),
+  collection: vi.fn((_, nombreColeccion) => ({ nombreColeccion })),
+  doc: vi.fn(() => ({})),
+  onSnapshot: (...args) => mockOnSnapshot(...args),
   runTransaction: vi.fn(),
-  serverTimestamp: vi.fn(),
+  serverTimestamp: vi.fn(() => "timestamp-mock"),
 }));
 
 describe("Login", () => {
@@ -39,6 +40,43 @@ describe("Login", () => {
       logout: vi.fn(),
       updateProfile: vi.fn(),
       clearError: vi.fn(),
+    });
+
+    mockOnSnapshot.mockImplementation((ref, onNext) => {
+      if (ref?.nombreColeccion === "users") {
+        onNext({ docs: [] });
+      }
+
+      if (ref?.nombreColeccion === "movimientos") {
+        onNext({
+          docs: [
+            {
+              id: "mov-1",
+              data: () => ({
+                tipo: "transferencia",
+                emisorUid: "user-2",
+                receptorUid: "user-1",
+                monto: 250,
+                descripcion: "Pago recibido",
+                fecha: { toDate: () => new Date("2026-07-15T12:00:00Z") },
+              }),
+            },
+            {
+              id: "mov-2",
+              data: () => ({
+                tipo: "transferencia",
+                emisorUid: "user-1",
+                receptorUid: "user-2",
+                monto: 100,
+                descripcion: "Pago enviado",
+                fecha: { toDate: () => new Date("2026-07-14T12:00:00Z") },
+              }),
+            },
+          ],
+        });
+      }
+
+      return vi.fn();
     });
   });
 
@@ -64,5 +102,34 @@ describe("Login", () => {
 
     expect(await screen.findByText(/usuario y\/o contraseña incorrectos/i)).toBeInTheDocument();
     expect(loginSpy).toHaveBeenCalledWith("correo@ejemplo.com", "123456");
+  });
+
+  it("renderiza el historial ordenado del movimiento más reciente al más antiguo", async () => {
+    const user = userEvent.setup();
+
+    mockUseAuth.mockReturnValue({
+      user: { uid: "user-1", email: "origen@correo.com" },
+      profile: { saldo: 1000 },
+      loading: false,
+      profileLoading: false,
+      profileError: "",
+      error: "",
+      login: loginSpy,
+      register: vi.fn(),
+      logout: vi.fn(),
+      updateProfile: vi.fn(),
+      clearError: vi.fn(),
+    });
+
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: /ver movimientos/i }));
+
+    const historyItems = await screen.findAllByRole("listitem");
+
+    expect(historyItems[0]).toHaveTextContent(/pago recibido/i);
+    expect(historyItems[0]).toHaveTextContent(/recepción/i);
+    expect(historyItems[1]).toHaveTextContent(/pago enviado/i);
+    expect(historyItems[1]).toHaveTextContent(/envío/i);
   });
 });
