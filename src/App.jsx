@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { collection, doc, onSnapshot, runTransaction, serverTimestamp } from "firebase/firestore";
 import { db } from "./firebase";
 import { useAuth } from "./context/AuthContext";
+import Login from "./components/Login";
+import TransferForm from "./components/TransferForm";
+import Historial from "./components/Historial";
 import { validarTransferencia } from "./utils/validacionesTransferencia";
 import "./App.css";
 
@@ -606,42 +609,21 @@ function App() {
 
   if (!usuario) {
     return (
-      <div className={`app ${modoOscuro ? "app-dark" : ""}`}>
-        {/* Si no hay sesión activa, solo se muestra el formulario de acceso o registro. */}
-        <form className={`auth-card ${modoOscuro ? "card-dark" : ""}`} onSubmit={handleAuthSubmit}>
-          <div className="auth-header">
-            <h1>XBank</h1>
-            <p>Gestiona tu dinero con seguridad</p>
-          </div>
-
-          {!iniciarSesion && (
-            <label>
-              Nombre completo
-              <input value={nombre} onChange={(event) => setNombre(event.target.value)} placeholder="Juan Pérez" required />
-            </label>
-          )}
-
-          <label>
-            Correo electrónico
-            <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="correo@ejemplo.com" required />
-          </label>
-
-          <label>
-            Contraseña
-            <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Mínimo 6 caracteres" required />
-          </label>
-
-          <button type="submit" disabled={procesando}>
-            {procesando ? "Procesando..." : iniciarSesion ? "Iniciar sesión" : "Crear cuenta"}
-          </button>
-
-          <button type="button" className="secondary-btn" onClick={resetForms}>
-            {iniciarSesion ? "Crear una cuenta" : "Ya tengo cuenta"}
-          </button>
-
-          {(error || sessionError) && <p className="feedback feedback-error">{error || sessionError}</p>}
-        </form>
-      </div>
+      <Login
+        modoOscuro={modoOscuro}
+        iniciarSesion={iniciarSesion}
+        nombre={nombre}
+        email={email}
+        password={password}
+        procesando={procesando}
+        error={error}
+        sessionError={sessionError}
+        onSubmit={handleAuthSubmit}
+        onToggleModo={resetForms}
+        onNombreChange={setNombre}
+        onEmailChange={setEmail}
+        onPasswordChange={setPassword}
+      />
     );
   }
 
@@ -678,65 +660,21 @@ function App() {
           )}
         </div>
 
-        <div className="transfer-card">
-          <div className="transfer-header">
-            <h2>Transferir dinero</h2>
-            <button type="button" className="secondary-btn" onClick={handleTransferToggle}>
-              {mostrarFormularioTransferencia ? "Ocultar" : "Transferir"}
-            </button>
-          </div>
-
-          {mostrarFormularioTransferencia && (
-            <form className="transfer-form" onSubmit={handleTransferSubmit}>
-              <label className="transfer-field">
-                Destinatario
-                {usuariosDisponibles.length > 0 ? (
-                  <select value={destinatarioId} onChange={(event) => setDestinatarioId(event.target.value)}>
-                    <option value="">Selecciona un usuario</option>
-                    {usuariosDisponibles.map((usuarioDisponible) => (
-                      <option key={usuarioDisponible.id} value={usuarioDisponible.id}>
-                        {usuarioDisponible.nombre} ({usuarioDisponible.email})
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <p className="transfer-empty">No hay otros usuarios disponibles para transferir.</p>
-                )}
-              </label>
-
-              <label className="transfer-field">
-                Monto
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={montoTransferencia}
-                  onChange={handleAmountChange}
-                  placeholder="10000"
-                />
-              </label>
-
-              <label className="transfer-field">
-                Descripción
-                <input
-                  type="text"
-                  value={descripcionTransferencia}
-                  onChange={(event) => setDescripcionTransferencia(event.target.value)}
-                  placeholder="Pago por servicios"
-                />
-              </label>
-
-              <div className="transfer-actions">
-                <button type="submit" disabled={transferenciaProcesando || !destinatarioId || !montoTransferencia}>
-                  {transferenciaProcesando ? "Procesando..." : "Confirmar transferencia"}
-                </button>
-              </div>
-
-              {transferenciaError && <p className="feedback feedback-error">{transferenciaError}</p>}
-              {transferenciaExito && <p className="feedback">{transferenciaExito}</p>}
-            </form>
-          )}
-        </div>
+        <TransferForm
+          usuariosDisponibles={usuariosDisponibles}
+          mostrarFormularioTransferencia={mostrarFormularioTransferencia}
+          destinatarioId={destinatarioId}
+          onToggle={handleTransferToggle}
+          onDestinatarioChange={setDestinatarioId}
+          montoTransferencia={montoTransferencia}
+          onMontoChange={setMontoTransferencia}
+          descripcionTransferencia={descripcionTransferencia}
+          onDescripcionChange={setDescripcionTransferencia}
+          transferenciaProcesando={transferenciaProcesando}
+          transferenciaError={transferenciaError}
+          transferenciaExito={transferenciaExito}
+          onSubmit={handleTransferSubmit}
+        />
 
         <div className="operation-card">
           <div className="transfer-header">
@@ -814,93 +752,26 @@ function App() {
           </div>
         </div>
 
-        <div className="history-card">
-          <div className="transfer-header">
-            <h2>Movimientos</h2>
-            <button type="button" className="secondary-btn" onClick={handleHistorialToggle}>
-              {mostrarHistorial ? "Ocultar movimientos" : "Ver movimientos"}
-            </button>
-          </div>
-
-          {mostrarHistorial && (
-            <div className="history-content">
-              {movimientosCargando ? (
-                <p className="transfer-empty">Cargando historial...</p>
-              ) : movimientosError ? (
-                <p className="feedback feedback-error">{movimientosError}</p>
-              ) : movimientos.length === 0 ? (
-                <p className="transfer-empty">No hay movimientos registrados todavía.</p>
-              ) : (
-                <>
-                  <div className="history-filters">
-                    <label className="filter-field">
-                      Tipo
-                      <select value={filtroTipo} onChange={(event) => setFiltroTipo(event.target.value)}>
-                        <option value="todos">Todos</option>
-                        <option value="envio">Envío</option>
-                        <option value="recepcion">Recepción</option>
-                        <option value="deposito">Depósito</option>
-                        <option value="retiro">Retiro</option>
-                      </select>
-                    </label>
-
-                    <label className="filter-field">
-                      Mes
-                      <select value={filtroMes} onChange={(event) => setFiltroMes(event.target.value)}>
-                        <option value="todos">Todos</option>
-                        {opcionesMeses.map((mes) => (
-                          <option key={mes.value} value={mes.value}>
-                            {mes.label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label className="filter-field">
-                      Contraparte
-                      <select value={filtroContraparte} onChange={(event) => setFiltroContraparte(event.target.value)}>
-                        <option value="todos">Todas</option>
-                        {opcionesContraparte.map((contraparte) => (
-                          <option key={contraparte} value={contraparte}>
-                            {contraparte}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  </div>
-
-                  {movimientosFiltrados.length === 0 ? (
-                    <p className="transfer-empty">No hay movimientos con esos filtros.</p>
-                  ) : (
-                    <ul className="history-list">
-                      {movimientosFiltrados.map((movimiento) => {
-                        const esEnvio = esMovimientoNegativo(movimiento);
-                        const etiquetaMovimiento = obtenerEtiquetaMovimiento(movimiento);
-
-                        return (
-                          <li key={movimiento.id} className="history-item">
-                            <div>
-                              <p className="history-title">
-                                {etiquetaMovimiento} · {obtenerContraparte(movimiento)}
-                              </p>
-                              <p className="history-meta">
-                                {formatearFechaHora(movimiento.fecha)} · {movimiento.descripcion || "Sin descripción"}
-                              </p>
-                            </div>
-                            <p className={`history-amount ${esEnvio ? "negative" : "positive"}`}>
-                              {esEnvio ? "-" : "+"}
-                              {formatearSaldo(movimiento.monto)}
-                            </p>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
-                </>
-              )}
-            </div>
-          )}
-        </div>
+        <Historial
+          mostrarHistorial={mostrarHistorial}
+          onToggle={handleHistorialToggle}
+          movimientosCargando={movimientosCargando}
+          movimientosError={movimientosError}
+          movimientos={movimientos}
+          movimientosFiltrados={movimientosFiltrados}
+          filtroTipo={filtroTipo}
+          onFiltroTipoChange={setFiltroTipo}
+          filtroMes={filtroMes}
+          onFiltroMesChange={setFiltroMes}
+          filtroContraparte={filtroContraparte}
+          onFiltroContraparteChange={setFiltroContraparte}
+          opcionesMeses={opcionesMeses}
+          opcionesContraparte={opcionesContraparte}
+          formatearFechaHora={formatearFechaHora}
+          formatearSaldo={formatearSaldo}
+          obtenerContraparte={obtenerContraparte}
+          esMovimientoNegativo={esMovimientoNegativo}
+        />
       </div>
     </div>
   );

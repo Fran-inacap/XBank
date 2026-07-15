@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import App from "../App";
 
 const mockUseAuth = vi.fn();
 const mockOnSnapshot = vi.fn();
+const mockUnsubscribeUsuarios = vi.fn();
+const mockUnsubscribeMovimientos = vi.fn();
 let loginSpy;
 
 vi.mock("../context/AuthContext", () => ({
@@ -23,14 +25,14 @@ vi.mock("firebase/firestore", () => ({
   serverTimestamp: vi.fn(() => "timestamp-mock"),
 }));
 
-describe("Login", () => {
+describe("Historial", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     loginSpy = vi.fn();
 
     mockUseAuth.mockReturnValue({
-      user: null,
-      profile: null,
+      user: { uid: "user-1", email: "origen@correo.com" },
+      profile: { saldo: 1000 },
       loading: false,
       profileLoading: false,
       profileError: "",
@@ -45,6 +47,7 @@ describe("Login", () => {
     mockOnSnapshot.mockImplementation((ref, onNext) => {
       if (ref?.nombreColeccion === "users") {
         onNext({ docs: [] });
+        return mockUnsubscribeUsuarios;
       }
 
       if (ref?.nombreColeccion === "movimientos") {
@@ -74,52 +77,15 @@ describe("Login", () => {
             },
           ],
         });
+        return mockUnsubscribeMovimientos;
       }
 
       return vi.fn();
     });
   });
 
-  it("no llama al servicio de autenticación cuando los campos están vacíos", () => {
-    render(<App />);
-
-    fireEvent.submit(screen.getByRole("button", { name: /iniciar sesión/i }).closest("form"));
-
-    expect(loginSpy).not.toHaveBeenCalled();
-    expect(screen.getByText(/completa tu correo y contraseña/i)).toBeInTheDocument();
-  });
-
-  it("muestra un mensaje de error cuando el servicio de autenticación rechaza credenciales inválidas", async () => {
-    const user = userEvent.setup();
-
-    loginSpy.mockRejectedValueOnce({ code: "auth/invalid-credential" });
-
-    render(<App />);
-
-    await user.type(screen.getByLabelText(/correo electrónico/i), "correo@ejemplo.com");
-    await user.type(screen.getByLabelText(/contraseña/i), "123456");
-    await user.click(screen.getByRole("button", { name: /iniciar sesión/i }));
-
-    expect(await screen.findByText(/usuario y\/o contraseña incorrectos/i)).toBeInTheDocument();
-    expect(loginSpy).toHaveBeenCalledWith("correo@ejemplo.com", "123456");
-  });
-
   it("renderiza el historial ordenado del movimiento más reciente al más antiguo", async () => {
     const user = userEvent.setup();
-
-    mockUseAuth.mockReturnValue({
-      user: { uid: "user-1", email: "origen@correo.com" },
-      profile: { saldo: 1000 },
-      loading: false,
-      profileLoading: false,
-      profileError: "",
-      error: "",
-      login: loginSpy,
-      register: vi.fn(),
-      logout: vi.fn(),
-      updateProfile: vi.fn(),
-      clearError: vi.fn(),
-    });
 
     render(<App />);
 
@@ -136,20 +102,6 @@ describe("Login", () => {
   it("distingue envíos de recepciones en el historial", async () => {
     const user = userEvent.setup();
 
-    mockUseAuth.mockReturnValue({
-      user: { uid: "user-1", email: "origen@correo.com" },
-      profile: { saldo: 1000 },
-      loading: false,
-      profileLoading: false,
-      profileError: "",
-      error: "",
-      login: loginSpy,
-      register: vi.fn(),
-      logout: vi.fn(),
-      updateProfile: vi.fn(),
-      clearError: vi.fn(),
-    });
-
     render(<App />);
 
     await user.click(screen.getByRole("button", { name: /ver movimientos/i }));
@@ -165,27 +117,15 @@ describe("Login", () => {
   it("muestra un estado vacío cuando no hay movimientos", async () => {
     const user = userEvent.setup();
 
-    mockUseAuth.mockReturnValue({
-      user: { uid: "user-1", email: "origen@correo.com" },
-      profile: { saldo: 1000 },
-      loading: false,
-      profileLoading: false,
-      profileError: "",
-      error: "",
-      login: loginSpy,
-      register: vi.fn(),
-      logout: vi.fn(),
-      updateProfile: vi.fn(),
-      clearError: vi.fn(),
-    });
-
     mockOnSnapshot.mockImplementation((ref, onNext) => {
       if (ref?.nombreColeccion === "users") {
         onNext({ docs: [] });
+        return mockUnsubscribeUsuarios;
       }
 
       if (ref?.nombreColeccion === "movimientos") {
         onNext({ docs: [] });
+        return mockUnsubscribeMovimientos;
       }
 
       return vi.fn();
@@ -196,5 +136,14 @@ describe("Login", () => {
     await user.click(screen.getByRole("button", { name: /ver movimientos/i }));
 
     expect(await screen.findByText(/no hay movimientos registrados todavía/i)).toBeInTheDocument();
+  });
+
+  it("llama a unsubscribe al desmontar el componente", () => {
+    const { unmount } = render(<App />);
+
+    unmount();
+
+    expect(mockUnsubscribeUsuarios).toHaveBeenCalledTimes(1);
+    expect(mockUnsubscribeMovimientos).toHaveBeenCalledTimes(1);
   });
 });
