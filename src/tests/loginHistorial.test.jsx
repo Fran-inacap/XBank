@@ -161,4 +161,40 @@ describe("Login", () => {
     expect(historyItems[1]).toHaveTextContent(/envío\s*·\s*usuario externo/i);
     expect(historyItems[1]).toHaveTextContent(/-\$100/);
   });
+
+  it("muestra un estado vacío cuando no hay movimientos", async () => {
+    const user = userEvent.setup();
+
+    mockUseAuth.mockReturnValue({
+      user: { uid: "user-1", email: "origen@correo.com" },
+      profile: { saldo: 1000 },
+      loading: false,
+      profileLoading: false,
+      profileError: "",
+      error: "",
+      login: loginSpy,
+      register: vi.fn(),
+      logout: vi.fn(),
+      updateProfile: vi.fn(),
+      clearError: vi.fn(),
+    });
+
+    mockOnSnapshot.mockImplementation((ref, onNext) => {
+      if (ref?.nombreColeccion === "users") {
+        onNext({ docs: [] });
+      }
+
+      if (ref?.nombreColeccion === "movimientos") {
+        onNext({ docs: [] });
+      }
+
+      return vi.fn();
+    });
+
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: /ver movimientos/i }));
+
+    expect(await screen.findByText(/no hay movimientos registrados todavía/i)).toBeInTheDocument();
+  });
 });
